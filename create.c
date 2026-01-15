@@ -1672,7 +1672,7 @@ void update_char(int cn) {
         inr = ch[cn].item[WN_RHAND];
         inl = ch[cn].item[WN_LHAND];
 
-        if (!inr || !(it[inr].flags & IF_WEAPON)) { // no weapon
+        if (!inr || !(it[inr].flags & IF_WEAPON) || (it[inr].flags & IF_HAND)) { // no weapon
             if (inl && it[inl].drdata[0]) off = 3; // torch
             else off = 0; // nothing
         } else { // weapon
