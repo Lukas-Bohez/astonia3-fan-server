@@ -28,3 +28,5 @@ int player_driver_get_move(int cn, int *px, int *py);
 int player_driver_fake_move(int cn, int x, int y);
 void player_driver_dig_off(int cn);
 void player_driver_dig_on(int cn);
+
+void tutorial_cmd(int cn, char *cmd);

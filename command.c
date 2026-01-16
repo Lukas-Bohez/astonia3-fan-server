@@ -46,6 +46,7 @@
 #include "lab.h"
 #include "club.h"
 #include "questlog.h"
+#include "player_driver.h"
 
 struct gotolist {
     char *name;
@@ -880,6 +881,7 @@ static void cmd_sort(int cn, char *ptr) {
 
 static void cmd_help(int cn) {
     log_char(cn, LOG_SYSTEM, 0, "/holler <text> - like say, but with vastly increased range");
+    log_char(cn, LOG_SYSTEM, 0, "/hints <cmd> - turn the tutorial 'off', 'on' or 'reset' it.");
     log_char(cn, LOG_SYSTEM, 0, "/shout <text> - like say, but with increased range");
     log_char(cn, LOG_SYSTEM, 0, "/say <text> - makes your character say <text>");
     log_char(cn, LOG_SYSTEM, 0, "/murmur <text> - like say, but only within close range");
@@ -2436,12 +2438,18 @@ int command(int cn, char *ptr) { // 1=ok, 0=repeat
         }
         return 1;
     }
+
     if (cmdcmp(ptr, "nopulse", 5)) {
         if ((ppd = set_data(cn, DRD_LOSTCON_PPD, sizeof(struct lostcon_ppd)))) {
             if (ppd->nopulse) ppd->nopulse = 0;
             else ppd->nopulse = 1;
             show_lostconppd(cn, ppd);
         }
+        return 1;
+    }
+
+    if ((len = cmdcmp(ptr, "hints", 3))) {
+        tutorial_cmd(cn, ptr + len);
         return 1;
     }
 

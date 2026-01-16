@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <zlib.h>
 
 #include "server.h"
@@ -273,6 +274,9 @@ int plr_attack_driver(int cn, int co) {
 }
 
 #define TF_TIMEOUT (60 * 60)
+
+#define TS_DISABLED (1u << 0)
+
 struct tutorial_ppd {
     int state;
     int timer;
@@ -301,14 +305,46 @@ struct tutorial_ppd {
     int chat2_cnt, chat2_last;
 };
 
+void tutorial_cmd(int cn, char *cmd) {
+    struct tutorial_ppd *ppd;
+
+    if (!(ppd = set_data(cn, DRD_TUTORIAL_PPD, sizeof(struct tutorial_ppd)))) return;
+
+    while (isspace(*cmd)) cmd++;
+
+    if (!strncasecmp(cmd, "on", 2)) {
+        ppd->state &= ~TS_DISABLED;
+        log_char(cn, LOG_SYSTEM, 0, "Tutorial enabled.");
+        return;
+    }
+
+    if (!strncasecmp(cmd, "off", 3)) {
+        ppd->state |= TS_DISABLED;
+        log_char(cn, LOG_SYSTEM, 0, "Tutorial disabled.");
+        return;
+    }
+
+    if (!strncasecmp(cmd, "reset", 5)) {
+        bzero(ppd, sizeof(struct tutorial_ppd));
+        log_char(cn, LOG_SYSTEM, 0, "Tutorial reset!");
+        return;
+    }
+    log_char(cn, LOG_SYSTEM, 0, "/hints off, /hints on, or /hints reset.");
+}
+
 void tutorial(int cn, int nr, struct tutorial_ppd *ppd) {
     struct area1_ppd *ppd2;
-    int in, n, tmp, f;
+    int in, n, tmp, f, ver;
     char *sk = NULL;
+
+    if (ppd->state & TS_DISABLED) return;
+
+    ver = get_player_version(nr);
 
     // newbie greeting
     if (realtime - ch[cn].login_time < 20 && ppd->welcome_cnt < 3 && realtime - ppd->welcome_last > TF_TIMEOUT) {
-        log_char(cn, LOG_SYSTEM, 0, "#Welcome to Astonia 3, %s. This is the help window. To remove it, press ESCAPE.$$You can access the client help facility by pressing F11.$$Should you ever require human help, type '/info help' and press RETURN.", ch[cn].name);
+        if (!ver) log_char(cn, LOG_SYSTEM, 0, "#Welcome to Astonia 3, %s. This is the help window. To remove it, press ESCAPE.$$You can access the client help facility by pressing F11.$$You can disable these messages with '/hints off', enable them again with 'hints on' or restart them with 'hints reset'.", ch[cn].name);
+        else log_char(cn, LOG_SYSTEM, 0, "#Welcome to Astonia 3, %s. This is the help window. To remove it, press ESCAPE.$$You can access the client help facility by pressing F11.$$You can disable these messages with '/hints off', enable them again with 'hints on' or restart them with 'hints reset'", ch[cn].name);
         ppd->welcome_cnt++;
         ppd->welcome_last = realtime;
         ppd->timer = realtime;
@@ -721,13 +757,13 @@ void player_driver(int cn, int ret, int last_action) {
 
         if (msg->type == NT_NPC && msg->dat1 == NTID_TUTORIAL) {
             //say(cn,"got dat2=%d, dat=%s, diff1=%d, cnt=%d, diff2=%d",msg->dat2,ch[msg->dat3].name,realtime-ppd->timer,ppd->give_cnt,realtime-ppd->give_last);
-            if (msg->dat2 == 0 && msg->dat3 == cn && realtime - ppd->timer > 10 && ppd->give_cnt < 3 && realtime - ppd->give_last > TF_TIMEOUT && has_item(cn, IID_AREA1_WOODPOTION)) {
+            if (!(ppd->state & TS_DISABLED) && msg->dat2 == 0 && msg->dat3 == cn && realtime - ppd->timer > 10 && ppd->give_cnt < 3 && realtime - ppd->give_last > TF_TIMEOUT && has_item(cn, IID_AREA1_WOODPOTION)) {
                 log_char(cn, LOG_SYSTEM, 0, "#Now would be a good time to hand Lydia the potion you found. Hold down SHIFT and left-click on the potion. Then hold down CTRL (and release shift) and left-click on Lydia.");
                 ppd->give_cnt++;
                 ppd->give_last = realtime;
                 ppd->timer = realtime;
             }
-            if (msg->dat2 == 1 && msg->dat3 == cn && realtime - ppd->timer > 10 && ppd->give_cnt < 3 && realtime - ppd->give_last > TF_TIMEOUT && has_item(cn, IID_AREA1_SKELSKULL)) {
+            if (!(ppd->state & TS_DISABLED) && msg->dat2 == 1 && msg->dat3 == cn && realtime - ppd->timer > 10 && ppd->give_cnt < 3 && realtime - ppd->give_last > TF_TIMEOUT && has_item(cn, IID_AREA1_SKELSKULL)) {
                 log_char(cn, LOG_SYSTEM, 0, "#Now would be a good time to hand Gwendylon the skull you found. Hold down SHIFT and left-click on the skull. Then hold down CTRL (and release shift) and left-click on Gwendylon.");
                 ppd->give_cnt++;
                 ppd->give_last = realtime;
@@ -736,7 +772,7 @@ void player_driver(int cn, int ret, int last_action) {
             //if (msg->dat2==2525 && msg->dat3==cn) { bzero(ppd,sizeof(*ppd)); ppd->state=4; } // !!!!!!!!!!!!
         }
 
-        if (msg->type == NT_DEAD && msg->dat2 == cn && realtime - ppd->timer > 10 && ppd->grave_cnt < 3 && realtime - ppd->grave_last > TF_TIMEOUT) {
+        if (!(ppd->state & TS_DISABLED) && msg->type == NT_DEAD && msg->dat2 == cn && realtime - ppd->timer > 10 && ppd->grave_cnt < 3 && realtime - ppd->grave_last > TF_TIMEOUT) {
             co = msg->dat1;
             log_char(cn, LOG_SYSTEM, 0, "#Now that you've killed the %s, it would be wise to search %s body. Hold down SHIFT and left click on the body. You'll see all the things you find in the bottom left window.$To take any of the items, left-click on them.", ch[co].name, hisname(co));
             ppd->grave_cnt++;

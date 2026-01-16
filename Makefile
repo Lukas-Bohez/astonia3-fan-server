@@ -163,7 +163,7 @@ server:	$(OBJS)
 .obj/effect.o:		effect.c server.h log.h notify.h death.h light.h tool.h spell.h los.h mem.h sector.h effect.h
 	$(CC) $(CFLAGS) -o .obj/effect.o -c effect.c
 
-.obj/command.o:		command.c server.h talk.h log.h tool.h skill.h database.h date.h do.h map.h command.h chat.h misc_ppd.h
+.obj/command.o:		command.c server.h talk.h log.h tool.h skill.h database.h date.h do.h map.h command.h chat.h misc_ppd.h player_driver.h
 	$(CC) $(CFLAGS) -o .obj/command.o -c command.c
 
 .obj/date.o:		date.c server.h talk.h date.h
