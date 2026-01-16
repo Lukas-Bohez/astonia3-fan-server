@@ -1103,10 +1103,13 @@ int add_spell(int cn, int driver, int duration, char *name) {
     return in;
 }
 
-int look_item(int cn, struct item *in) {
+int look_item(int cn, struct item *in, int slot) {
     int n, v, m = 0, r = 0, s;
 
     if (!in->name[0]) return 1; // no name means we dont display anything
+
+    // send slot number for client version > 0
+    if (get_char_version(cn) > 0) log_char(cn, LOG_SYSTEM, 0, "\260\260\260ITEMDESC%04d\260\260\260", slot);
 
     log_char(cn, LOG_SYSTEM, 0, "\260c5%s:", in->name);
     if (in->description[0]) log_char(cn, LOG_SYSTEM, 0, "%s", in->description);
@@ -1193,6 +1196,8 @@ int look_item(int cn, struct item *in) {
     if ((in->sprite >= 53031 && in->sprite <= 53036)) { // fire suit
         log_char(cn, LOG_SYSTEM, 0, "This is part of an fire demon suit.");
     }
+
+    if (get_char_version(cn) > 0 && slot != -1) log_char(cn, LOG_SYSTEM, 0, "\260c5.");
 
     return 1;
 }
@@ -1297,7 +1302,7 @@ int look_char(int cn, int co) {
         int n, in, fn;
 
         for (n = 12; n < 30; n++) {
-            if ((in = ch[co].item[n])) look_item(cn, it + in);
+            if ((in = ch[co].item[n])) look_item(cn, it + in, -1);
         }
 
         for (n = 0; n < 4; n++) {

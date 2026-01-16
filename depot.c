@@ -86,7 +86,7 @@ void player_depot(int cn, int nr, int flag, int fast) {
         }
     } else {
         if (!ppd->itm[nr].flags) return;
-        look_item(cn, &ppd->itm[nr]);
+        look_item(cn, &ppd->itm[nr], 2000 + nr);
     }
 }
 

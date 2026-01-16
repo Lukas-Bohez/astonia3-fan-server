@@ -1063,7 +1063,7 @@ void mission_show_reward(int cn, int co, int nr, struct mission_ppd *ppd) {
             elog("mission_give_reward: item template %s (%d) not found.", mis_rew[nr].itmtmp, nr);
             return;
         }
-        look_item(co, it + in);
+        look_item(co, it + in, -1);
         destroy_item(in);
     }
 
@@ -1376,7 +1376,7 @@ void mission_giver_driver(int cn, int ret, int lastact) {
                     }
                     break;
                 case 18:
-                    look_item(co, it + ch[cn].item[30]);
+                    look_item(co, it + ch[cn].item[30], -1);
                     log_char(co, LOG_SYSTEM, 0, "Price: %d points (you have %d points)", dat->spec_cost, ppd->points);
                     log_char(co, LOG_SYSTEM, 0, "Do you want to \260c4buy the special offer\260c0 (offer guaranteed for 5 minutes, unless someone else buys it; might change anytime after that)?");
                     dat->next_spec = max(dat->next_spec, ticker + TICKS * 60 * 5);
