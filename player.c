@@ -2584,7 +2584,7 @@ int log_player(int nr, int color, char *format, ...) {
     unsigned char buf[1024];
     int len, size;
 
-    if (nr < 1 || nr > MAXPLAYER) return 0;
+    if (nr < 1 || nr >= MAXPLAYER) return 0;
     if (!player[nr]) return 0;
 
     va_start(args, format);
