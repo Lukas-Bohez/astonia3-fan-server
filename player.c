@@ -325,7 +325,7 @@ static void read_login(int nr) {
     ch[cn].flags |= CF_UPDATE | CF_ITEMS | CF_PROF;
     ch[cn].driver = 0;
 
-    dlog(cn, 0, "Character entered server: unique=%08u, his ip=%d.%d.%d.%d, our ip=%d.%d.%d.%d",
+    dlog(cn, 0, "Character entered server: unique=%08u, his ip=%d.%d.%d.%d, our ip=%d.%d.%d.%d, v=%d",
          unique,
          (hisip >> 0) & 255,
          (hisip >> 8) & 255,
@@ -334,7 +334,8 @@ static void read_login(int nr) {
          (ourip >> 0) & 255,
          (ourip >> 8) & 255,
          (ourip >> 16) & 255,
-         (ourip >> 24) & 255);
+         (ourip >> 24) & 255,
+         player[nr]->client_version);
     //charlog(cn,"Character entered server: x=%d, y=%d, tmpx=%d, tmpy=%d, tmpa=%d, restx=%d, resty=%d, resta=%d, player=%d",ch[cn].x,ch[cn].y,ch[cn].tmpx,ch[cn].tmpy,ch[cn].tmpa,ch[cn].restx,ch[cn].resty,ch[cn].resta,ch[cn].player);
 
     log_items(cn);
@@ -2843,4 +2844,18 @@ unsigned int get_player_addr(int nr) {
     if (!player[nr]) return 0;
 
     return player[nr]->addr;
+}
+
+int get_player_version(int nr) {
+    if (!player) return 0;
+    if (!player[nr]) return 0;
+
+    return player[nr]->client_version;
+}
+
+int get_char_version(int cn) {
+    int nr;
+
+    if ((nr = ch[cn].player) && player[nr]) return player[nr]->client_version;
+    else return 0;
 }

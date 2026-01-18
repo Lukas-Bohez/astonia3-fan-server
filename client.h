@@ -289,6 +289,16 @@ union ceffect {
 #define SV_MIL_EXP 51
 #define SV_QUESTLOG 52
 #define SV_PROTOCOL 53
+#define SV_RESERVED1 54
+#define SV_RESERVED2 55
+#define SV_RESERVED3 56
+#define SV_RESERVED4 57
+#define SV_MOD1 58
+#define SV_MOD2 59
+#define SV_MOD3 60
+#define SV_MOD4 61
+#define SV_MOD5 62
+#define SV_RESERVED5 63
 
 // MAX SV IS 63 !
 
