@@ -1,70 +1,19 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <stdarg.h>
-#include <string.h>
-#include <ctype.h>
 #include <time.h>
-#include <errno.h>
-#include <math.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netdb.h>
+#include <getopt.h>
 #include <mysql/mysql.h>
 #include <mysql/mysqld_error.h>
-#define EXTERNAL_PROGRAM
-#include "server.h"
-#undef EXTERNAL_PROGRAM
-#include "mail.h"
-#include "statistics.h"
-#include "clan.h"
-#include "drdata.h"
-#include "skill.h"
-#include "depot.h"
-#include "club.h"
-#include "bank.h"
-#include "badip.h"
 #include "argon.h"
+#include "config.h"
 
 static MYSQL mysql;
-static char mysqlpass[80];
-
-static void makemysqlpass(void) {
-    static char key1[] = {117, 127, 98, 38, 118, 115, 100, 104, 0};
-    static char key2[] = {"fr5tgs23"};
-    static char key3[] = {"gj56ffe3"};
-    int n;
-
-    for (n = 0; key1[n]; n++) {
-        mysqlpass[n] = key1[n] ^ key2[n] ^ key3[n];
-        //printf("%d, ",mysqlpass[n]);
-    }
-    mysqlpass[n] = 0;
-    //printf("\n%s\n",mysqlpass);
-}
-
-static void destroymysqlpass(void) {
-    bzero(mysqlpass, sizeof(mysqlpass));
-}
 
 int init_database(void) {
     // init database client
     if (!mysql_init(&mysql)) return 0;
 
-    // try to login as root with our password
-    makemysqlpass();
-    if (!mysql_real_connect(&mysql, "localhost", "root", mysqlpass, "mysql", 0, NULL, 0)) {
-        destroymysqlpass();
-        fprintf(stderr, "MySQL error: %s (%d)\n", mysql_error(&mysql), mysql_errno(&mysql));
-        return 0;
-    }
-    destroymysqlpass();
-
-    if (mysql_query(&mysql, "use merc")) {
+    // try to login to database using config data
+    if (!mysql_real_connect(&mysql, config_data.dbhost, config_data.dbuser, config_data.dbpass, config_data.dbname, 0, NULL, 0)) {
         fprintf(stderr, "MySQL error: %s (%d)\n", mysql_error(&mysql), mysql_errno(&mysql));
         return 0;
     }
@@ -76,12 +25,36 @@ void exit_database(void) {
     mysql_close(&mysql);
 }
 
+void help(char *prog) {
+    fprintf(stderr, "Usage: %s [-s name=value] [-f filename] [-e] <email> <password>\n\n-s Set config name to value (e.g. dbhost=localhost).\n-f Read config file <filename>.\n-e Read configuration from environment variables.\n", prog);
+}
+
 int main(int argc, char **args) {
     char buf[512];
     char hash[256];
+    int c;
 
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s <email> <password>\n", args[0]);
+    while (1) {
+        c = getopt(argc, args, "s:f:e");
+        if (c == -1) break;
+        switch (c) {
+        case 'h':
+            help(args[0]);
+            exit(0);
+        case 's':
+            config_string(optarg);
+            break;
+        case 'f':
+            config_file(optarg);
+            break;
+        case 'e':
+            config_getenv();
+            break;
+        }
+    }
+
+    if (argc - optind != 2) {
+        help(args[0]);
         return 1;
     }
 
@@ -90,7 +63,7 @@ int main(int argc, char **args) {
         return 3;
     }
 
-    if (argon2id_hash_password(hash, sizeof(hash), args[2], NULL)) {
+    if (argon2id_hash_password(hash, sizeof(hash), args[optind + 1], NULL)) {
         fprintf(stderr, "Argon failed. Call Dad!\n");
         return 2;
     }
@@ -102,7 +75,7 @@ int main(int argc, char **args) {
                  "'N'," // locked
                  "'I'," // banned
                  "%d)", // vendor
-            args[1], hash, (int)time(NULL), 0);
+            args[optind], hash, (int)time(NULL), 0);
 
     if (mysql_query(&mysql, buf)) {
         fprintf(stderr, "Failed to create subscriber: Error: %s (%d)", mysql_error(&mysql), mysql_errno(&mysql));

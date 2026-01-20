@@ -32,6 +32,7 @@
 #include "swear.h"
 #include "chat.h"
 #include "club.h"
+#include "config.h"
 
 int remove_item_from_body_bg(int cnID, int IID);
 
@@ -78,7 +79,6 @@ struct cname cname[] = {
     {"God", "Ye God's private channel"} //32
 };
 
-#define CHATSERVER "localhost"
 #define INBUFSIZE 1024
 
 static int connected = 0,
@@ -93,7 +93,7 @@ static int connect_chat(void) {
     static struct sockaddr_in addr;
     struct hostent *he;
 
-    he = gethostbyname(CHATSERVER);
+    he = gethostbyname(config_data.chathost);
     if (!he) return 0;
 
     sock = socket(PF_INET, SOCK_STREAM, 0);

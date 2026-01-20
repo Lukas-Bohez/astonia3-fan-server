@@ -1,69 +1,23 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <stdarg.h>
 #include <string.h>
-#include <ctype.h>
 #include <time.h>
-#include <errno.h>
-#include <math.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netdb.h>
+#include <getopt.h>
 #include <mysql/mysql.h>
 #include <mysql/mysqld_error.h>
 #define EXTERNAL_PROGRAM
 #include "server.h"
 #undef EXTERNAL_PROGRAM
-#include "mail.h"
-#include "statistics.h"
-#include "clan.h"
 #include "drdata.h"
-#include "skill.h"
-#include "depot.h"
-#include "club.h"
-#include "bank.h"
-#include "badip.h"
+#include "config.h"
 
 static MYSQL mysql;
-static char mysqlpass[80];
-
-static void makemysqlpass(void) {
-    static char key1[] = {117, 127, 98, 38, 118, 115, 100, 104, 0};
-    static char key2[] = {"fr5tgs23"};
-    static char key3[] = {"gj56ffe3"};
-    int n;
-
-    for (n = 0; key1[n]; n++) {
-        mysqlpass[n] = key1[n] ^ key2[n] ^ key3[n];
-        //printf("%d, ",mysqlpass[n]);
-    }
-    mysqlpass[n] = 0;
-    //printf("\n%s\n",mysqlpass);
-}
-
-static void destroymysqlpass(void) {
-    bzero(mysqlpass, sizeof(mysqlpass));
-}
 
 int init_database(void) {
     // init database client
     if (!mysql_init(&mysql)) return 0;
 
     // try to login as root with our password
-    makemysqlpass();
-    if (!mysql_real_connect(&mysql, "localhost", "root", mysqlpass, "mysql", 0, NULL, 0)) {
-        destroymysqlpass();
-        fprintf(stderr, "MySQL error: %s (%d)\n", mysql_error(&mysql), mysql_errno(&mysql));
-        return 0;
-    }
-    destroymysqlpass();
-
-    if (mysql_query(&mysql, "use merc")) {
+    if (!mysql_real_connect(&mysql, config_data.dbhost, config_data.dbuser, config_data.dbpass, config_data.dbname, 0, NULL, 0)) {
         fprintf(stderr, "MySQL error: %s (%d)\n", mysql_error(&mysql), mysql_errno(&mysql));
         return 0;
     }
@@ -176,9 +130,34 @@ int create_char(int user_ID, char *new_user, char *class) {
     return 0;
 }
 
+void help(char *prog) {
+    fprintf(stderr, "Usage: %s [-s name=value] [-f filename] [-e] <accountID> <name> <genderandclassandgod>\ngenderandclassandgod: MW = male warrior, FM = female mage, FWG = female warrior god\n-s Set config name to value (e.g. dbhost=localhost).\n-f Read config file <filename>.\n-e Read configuration from environment variables.\n", prog);
+}
+
 int main(int argc, char **args) {
-    if (argc != 4) {
-        fprintf(stderr, "Usage: %s <accountID> <name> <genderandclass>\ngenderandclass: MW = male warrior, FM = female mage\n", args[0]);
+    int c;
+
+    while (1) {
+        c = getopt(argc, args, "s:f:e");
+        if (c == -1) break;
+        switch (c) {
+        case 'h':
+            help(args[0]);
+            exit(0);
+        case 's':
+            config_string(optarg);
+            break;
+        case 'f':
+            config_file(optarg);
+            break;
+        case 'e':
+            config_getenv();
+            break;
+        }
+    }
+
+    if (argc - optind != 3) {
+        help(args[0]);
         return 1;
     }
 
@@ -187,7 +166,7 @@ int main(int argc, char **args) {
         return 3;
     }
 
-    if (!create_char(atoi(args[1]), args[2], args[3])) {
+    if (!create_char(atoi(args[optind]), args[optind + 1], args[optind + 2])) {
         printf("Success.\n");
     }
 

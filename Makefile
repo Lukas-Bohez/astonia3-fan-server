@@ -47,7 +47,7 @@ OBJS=.obj/server.o .obj/io.o .obj/libload.o .obj/tool.o .obj/sleep.o \
 .obj/prof.o .obj/motd.o .obj/ignore.o .obj/tell.o .obj/clanlog.o \
 .obj/respawn.o .obj/poison.o .obj/swear.o .obj/lab.o \
 .obj/consistency.o .obj/btrace.o .obj/club.o .obj/teufel_pk.o \
-.obj/questlog.o .obj/badip.o .obj/argon.o
+.obj/questlog.o .obj/badip.o .obj/argon.o .obj/config.o
 
 
 # ------- Server -----
@@ -60,6 +60,9 @@ server:	$(OBJS)
 
 .obj/argon.o:		argon.c argon.h
 	$(CC) $(CFLAGS) -o .obj/argon.o -c argon.c
+
+.obj/config.o:		config.c config.h
+	$(CC) $(CFLAGS) -o .obj/config.o -c config.c
 
 .obj/io.o:		io.c server.h client.h player.h log.h mem.h io.h
 	$(CC) $(CFLAGS) -o $*.o -c $<
@@ -676,11 +679,11 @@ chatserver:		.obj/chatserver.o
 .obj/chatserver.o:	chatserver.c
 	$(CC) $(CFLAGS) -o .obj/chatserver.o -c chatserver.c
 
-create_account:		create_account.c .obj/argon.o argon.h
-	$(CC) $(CFLAGS) $(LDFLAGS) -o create_account create_account.c .obj/argon.o -lmysqlclient -largon2
+create_account:		create_account.c .obj/argon.o argon.h config.h .obj/config.o
+	$(CC) $(CFLAGS) $(LDFLAGS) -o create_account create_account.c .obj/argon.o .obj/config.o -lmysqlclient -largon2
 
-create_character:	create_character.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -o create_character create_character.c -lmysqlclient
+create_character:	create_character.c config.h .obj/config.o
+	$(CC) $(CFLAGS) $(LDFLAGS) -o create_character create_character.c .obj/config.o -lmysqlclient
 
 
 # ------- Helper -----
@@ -689,7 +692,8 @@ clean:
 	-rm server .obj/*.o *~ zones/*/*~ runtime/*/* chatserver create_weapons create_armor create_account create_character
 
 pretty:
-	@git ls-files -z -- '*.[ch]' | xargs -0 -r clang-format -i
+	@ls *.c *.h | xargs -r clang-format -i
 
 pretty-check:
-	@git ls-files -z -- '*.[ch]' | xargs -0 -r clang-format --dry-run -Werror
+	@ls *.c *.h | xargs -r clang-format --dry-run -Werror
+

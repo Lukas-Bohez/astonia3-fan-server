@@ -54,6 +54,7 @@
 #include "consistency.h"
 #include "talk.h"
 #include "club.h"
+#include "config.h"
 
 unsigned long long rdtsc(void);
 
@@ -183,7 +184,7 @@ int main(int argc, char *args[]) {
 
     if (argc > 1) {
         while (1) {
-            c = getopt(argc, args, "a:m:i:dhc");
+            c = getopt(argc, args, "a:m:i:dhcs:f:e");
             if (c == -1) break;
 
             switch (c) {
@@ -205,6 +206,15 @@ int main(int argc, char *args[]) {
                 //case 'n':	if (optarg) server_net=atoi(optarg); break;
             case 'i':
                 if (optarg) serverID = atoi(optarg);
+                break;
+            case 's':
+                config_string(optarg);
+                break;
+            case 'f':
+                config_file(optarg);
+                break;
+            case 'e':
+                config_getenv();
                 break;
             }
         }

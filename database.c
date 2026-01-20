@@ -63,6 +63,7 @@
 #include "club.h"
 #include "badip.h"
 #include "argon.h"
+#include "config.h"
 
 #define DT_QUERY 1
 #define DT_LOAD 2
@@ -130,29 +131,10 @@ unsigned int save_char_cnt = 0, save_area_cnt = 0, exit_char_cnt = 0, save_stora
 
 unsigned int query_stat[20];
 
-static char mysqlpass[80];
-
-static void makemysqlpass(void) {
-    static char key1[] = {117, 127, 98, 38, 118, 115, 100, 104, 0};
-    static char key2[] = {"fr5tgs23"};
-    static char key3[] = {"gj56ffe3"};
-    int n;
-
-    for (n = 0; key1[n]; n++) {
-        mysqlpass[n] = key1[n] ^ key2[n] ^ key3[n];
-        //printf("%d, ",mysqlpass[n]);
-    }
-    mysqlpass[n] = 0;
-    //printf("\n%s\n",mysqlpass);
-}
-
-static void destroymysqlpass(void) {
-    bzero(mysqlpass, sizeof(mysqlpass));
-}
-
 int mysql_query_con(MYSQL *my, const char *query) {
     int err, ret, nr;
     unsigned long long start, diff;
+    char buf[256];
 
     //xlog("size %d, query %.80s",strlen(query),query);
     //if (!demon && areaID==14) { int tmp; tmp=RANDOM(3); if (tmp) sleep(tmp); }
@@ -168,12 +150,11 @@ int mysql_query_con(MYSQL *my, const char *query) {
             elog("lost connection to server: %s", mysql_error(my));
             mysql_close(my);
             sleep(1);
-            makemysqlpass();
-            mysql_real_connect(my, "localhost", "root", mysqlpass, "mysql", 0, NULL, 0);
-            destroymysqlpass();
+            mysql_real_connect(my, config_data.dbhost, config_data.dbuser, config_data.dbpass, config_data.dbname, 0, NULL, 0);
         } else if (err == ER_NO_SUCH_TABLE) {
             elog("wrong database: %s", mysql_error(my));
-            mysql_query(my, "use merc");
+            sprintf(buf, "use %s", config_data.dbname);
+            mysql_query(my, buf);
         } else break;
     }
 
@@ -281,20 +262,10 @@ int init_database(void) {
     }
 
     // try to login as root with our password
-    makemysqlpass();
-    if (!mysql_real_connect(&mysql, "localhost", "root", mysqlpass, "mysql", 0, NULL, 0)) {
-        destroymysqlpass();
+    if (!mysql_real_connect(&mysql, config_data.dbhost, config_data.dbuser, config_data.dbpass, config_data.dbname, 0, NULL, 0)) {
         xlog("Connect to database failed.");
         exit(0);
-    } else {
-        destroymysqlpass();
-        xlog("Login to database as root OK");
-    }
-
-    // set default database to merc
-    if (mysql_query(&mysql, "use merc")) {
-        elog("Failed to select database merc: Error: %s (%d)", mysql_error(&mysql), mysql_errno(&mysql));
-    } else xlog("Using existing database merc");
+    } else xlog("Using existing database %s", config_data.dbname);
 
     // sweep database, remove all players marked as online here. we're just starting, there shouldnt be any...
     sprintf(buf, "update chars set current_area=0,current_mirror=0,spacer=45 where current_area=%d and current_mirror=%d", areaID, areaM);
