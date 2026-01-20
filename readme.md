@@ -56,3 +56,17 @@ sudo ufw allow 8080:8090/tcp
 sudo ufw allow 27584:27777/tcp
 sudo ufw enable
 ```
+
+If you want to be able to run "make pretty":
+```
+sudo apt-get install -y wget gnupg lsb-release software-properties-common
+wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/llvm.asc
+sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-21 main"
+sudo apt-get update
+sudo apt install clang-format-21
+sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-21 200
+sudo update-alternatives --set clang-format /usr/bin/clang-format-21
+clang-format --version
+```
+
+The last step should output a version starting with 21. now.
