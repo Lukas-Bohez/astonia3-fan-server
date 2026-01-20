@@ -343,8 +343,8 @@ void tutorial(int cn, int nr, struct tutorial_ppd *ppd) {
 
     // newbie greeting
     if (realtime - ch[cn].login_time < 20 && ppd->welcome_cnt < 3 && realtime - ppd->welcome_last > TF_TIMEOUT) {
-        if (!ver) log_char(cn, LOG_SYSTEM, 0, "#Welcome to Astonia 3, %s. This is the help window. To remove it, press ESCAPE.$$You can access the client help facility by pressing F11.$$You can disable these messages with '/hints off', enable them again with 'hints on' or restart them with 'hints reset'.", ch[cn].name);
-        else log_char(cn, LOG_SYSTEM, 0, "#Welcome to Astonia 3, %s. This is the help window. To remove it, press ESCAPE.$$You can access the client help facility by pressing F11.$$You can disable these messages with '/hints off', enable them again with 'hints on' or restart them with 'hints reset'", ch[cn].name);
+        if (!ver) log_char(cn, LOG_SYSTEM, 0, "#Welcome to Astonia 3, %s. This is the help window. To remove it, press ESCAPE.$$You can access the client help facility by pressing F11.$$You can disable these messages with '/hints off', enable them again with '/hints on' or restart them with '/hints reset'.", ch[cn].name);
+        else log_char(cn, LOG_SYSTEM, 0, "#Welcome to Astonia 3, %s. This is the help window. To remove it, press ESCAPE.$$You can access the client help facility by pressing F11.$$You can disable these messages with '/hints off', enable them again with '/hints on' or restart them with '/hints reset'", ch[cn].name);
         ppd->welcome_cnt++;
         ppd->welcome_last = realtime;
         ppd->timer = realtime;
