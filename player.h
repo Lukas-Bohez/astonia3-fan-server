@@ -154,8 +154,6 @@ void player_idle(int nr);
 void player_client_exit(int nr, char *reason);
 void kick_char(int cn);
 void write_scrollback(int nr, int cn, char *reason, char *namea, char *nameb);
-void plr_ls(int cn, char *dir);
-void plr_cat(int cn, char *dir);
 void player_special(int cn, unsigned int type, unsigned int opt1, unsigned int opt2);
 void reset_name(int cn);
 void sanity_check(int cn);

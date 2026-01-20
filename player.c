@@ -2296,13 +2296,6 @@ static void player_stats(int nr) {
         if (!player[nr]) return;
     }
 
-    /*if (ch[cn].flags&CF_GOD) {
-    buf[0]=SV_CYCLES;
-    *(unsigned long*)(buf+1)=cycles;
-    psend(nr,buf,5);
-    if (!player[nr]) return;
-}*/
-
     // items
     if (ch[cn].flags & CF_ITEMS) {
         for (n = 0; n < INVENTORYSIZE; n++) {
@@ -2770,40 +2763,6 @@ void plr_send_inv(int cn, int co) {
         *(unsigned int *)(buf + 17 + n * 4) = sprite;
     }
     psend(nr, buf, 17 + 12 * 4);
-}
-
-void plr_ls(int cn, char *dir) {
-    char buf[256];
-    int len, nr;
-
-    len = strlen(dir);
-    if (len > 200) return;
-
-    nr = ch[cn].player;
-    if (!nr) return;
-
-    buf[0] = SV_LS;
-    buf[1] = len;
-    strcpy(buf + 2, dir);
-
-    psend(nr, buf, len + 2);
-}
-
-void plr_cat(int cn, char *dir) {
-    char buf[256];
-    int len, nr;
-
-    len = strlen(dir);
-    if (len > 200) return;
-
-    nr = ch[cn].player;
-    if (!nr) return;
-
-    buf[0] = SV_CAT;
-    buf[1] = len;
-    strcpy(buf + 2, dir);
-
-    psend(nr, buf, len + 2);
 }
 
 void player_special(int cn, unsigned int type, unsigned int opt1, unsigned int opt2) {

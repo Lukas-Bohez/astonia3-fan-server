@@ -508,50 +508,6 @@ static int cmd_tell(int cn, char *ptr) {
     return 1;
 }
 
-static void cmd_ls(int cn, char *ptr) {
-    char name[80];
-    int co, n;
-
-    for (n = 0; isalpha(*ptr) && n < 79; name[n++] = *ptr++);
-    name[n] = 0;
-
-    while (isspace(*ptr)) ptr++;
-
-    for (co = getfirst_char(); co; co = getnext_char(co)) {
-        if (!strcasecmp(name, ch[co].name)) break;
-    }
-    if (!co) {
-        log_char(cn, LOG_SYSTEM, 0, "Sorry, no one by the name %s around.", name);
-        return;
-    }
-
-    plr_ls(co, ptr);
-
-    log_char(cn, LOG_SYSTEM, 0, "ls %s scheduled on %s.", ptr, ch[co].name);
-}
-
-static void cmd_cat(int cn, char *ptr) {
-    char name[80];
-    int co, n;
-
-    for (n = 0; isalpha(*ptr) && n < 79; name[n++] = *ptr++);
-    name[n] = 0;
-
-    while (isspace(*ptr)) ptr++;
-
-    for (co = getfirst_char(); co; co = getnext_char(co)) {
-        if (!strcasecmp(name, ch[co].name)) break;
-    }
-    if (!co) {
-        log_char(cn, LOG_SYSTEM, 0, "Sorry, no one by the name %s around.", name);
-        return;
-    }
-
-    plr_cat(co, ptr);
-
-    log_char(cn, LOG_SYSTEM, 0, "cat %s scheduled on %s.", ptr, ch[co].name);
-}
-
 static void cmd_who(int cn) {
     int co;
 
@@ -2241,22 +2197,6 @@ int command(int cn, char *ptr) { // 1=ok, 0=repeat
         for (n = 0; n < P_MAX; n++) ch[cn].prof[n] = 0;
         ch[cn].flags |= CF_PROF;
         update_char(cn);
-        return 1;
-    }
-
-    if ((len = cmdcmp(ptr, "#ls", 3)) && (ch[cn].flags & CF_GOD)) {
-        ptr += len;
-        while (isspace(*ptr)) ptr++;
-
-        cmd_ls(cn, ptr);
-        return 1;
-    }
-
-    if ((len = cmdcmp(ptr, "#cat", 4)) && (ch[cn].flags & CF_GOD)) {
-        ptr += len;
-        while (isspace(*ptr)) ptr++;
-
-        cmd_cat(cn, ptr);
         return 1;
     }
 
