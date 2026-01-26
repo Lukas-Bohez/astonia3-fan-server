@@ -182,6 +182,9 @@ int main(int argc, char *args[]) {
     printf("   ********************************************\n");
     printf("\n");
 
+    // load serverkey from file first so it can be overwritten by config
+    config_file(".serverkey");
+
     if (argc > 1) {
         while (1) {
             c = getopt(argc, args, "a:m:i:dhcs:f:e");
