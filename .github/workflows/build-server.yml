@@ -1,0 +1,27 @@
+name: Build Astonia Server (Ubuntu)
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: |
+          sudo dpkg --add-architecture i386 || true
+          sudo apt-get update
+          sudo apt-get install -y build-essential gcc-multilib make lib32z-dev libargon2-dev:i386 libmysqlclient-dev:i386 mariadb-server ca-certificates
+      - name: Build server
+        run: |
+          make -j$(nproc)
+      - name: Upload server artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: astonia-server
+          path: |
+            server

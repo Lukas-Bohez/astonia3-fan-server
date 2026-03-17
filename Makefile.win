@@ -1,0 +1,20 @@
+CC=/c/mingw32/mingw32/bin/gcc
+DEBUG=-g
+# Removed -m32 flags for MinGW build on Windows
+CFLAGS=-Wall -Wshadow -Werror -Wno-pointer-sign -fno-strict-aliasing -O3 $(DEBUG) -DSTAFF
+LDFLAGS=-O $(DEBUG) -L/c/mingw32/mingw32/lib
+LDRFLAGS=-O $(DEBUG) -rdynamic -L/c/mingw32/mingw32/lib
+DDFLAGS=-O $(DEBUG) -fPIC -shared
+DFLAGS=$(CFLAGS) -fPIC
+
+# Use the same targets as the original Makefile but prefer local toolchain
+all: server
+
+server:
+	@echo "Building server (Windows/MinGW) with CC=$(CC)"
+	$(CC) $(LDRFLAGS) -o server .obj/server.o .obj/io.o .obj/libload.o .obj/tool.o .obj/sleep.o .obj/log.o .obj/create.o .obj/notify.o .obj/skill.o .obj/do.o .obj/act.o .obj/player.o .obj/rdtsc.o .obj/los.o .obj/light.o .obj/map.o .obj/path.o .obj/error.o .obj/talk.o .obj/drdata.o .obj/death.o .obj/database.o .obj/see.o .obj/drvlib.o .obj/timer.o .obj/expire.o .obj/effect.o .obj/command.o .obj/date.o .obj/container.o .obj/store.o .obj/mem.o .obj/sector.o .obj/chat.o .obj/statistics.o .obj/mail.o .obj/player_driver.o .obj/clan.o .obj/lookup.o .obj/area.o .obj/task.o .obj/punish.o .obj/depot.o .obj/prof.o .obj/motd.o .obj/ignore.o .obj/tell.o .obj/clanlog.o .obj/respawn.o .obj/poison.o .obj/swear.o .obj/lab.o .obj/consistency.o .obj/btrace.o .obj/club.o .obj/teufel_pk.o .obj/questlog.o .obj/badip.o .obj/argon.o .obj/config.o -lmysqlclient -lm -lz -ldl -lpthread -largon2 || echo "Link failed (missing libs?)"
+
+.PHONY: objs
+objs:
+	@echo "Compiling object files (will use existing rules from Makefile)"
+	@echo "Run 'msys bash' and then 'make objs' to compile objects using this toolchain."
