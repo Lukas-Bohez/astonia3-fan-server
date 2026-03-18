@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include "strings.h"
 #include <signal.h>
 #include <sys/mman.h>
 #include <malloc.h>
@@ -18,6 +19,8 @@
 
 static pthread_mutex_t alloc_mutex;
 
+#undef min
+#undef max
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
 

@@ -3047,7 +3047,7 @@ void db_exterminate(char *name, char *master) {
     MYSQL_ROW row;
 
     int masterID, sID, nrc, nrb;
-    char query[256], sub[256], code[4];
+    char query[512], sub[256], code[4];
 
     masterID = atoi(master);
     code[0] = master[10];
@@ -3114,7 +3114,7 @@ void db_exterminate(char *name, char *master) {
 
 void db_rename(char *name, char *master_to) {
     int masterID, nr, len;
-    char query[256], to[256], *ptr;
+    char query[512], to[256], *ptr;
 
     masterID = atoi(master_to);
     strcpy(to, master_to + 11);
@@ -3132,7 +3132,7 @@ void db_rename(char *name, char *master_to) {
         return;
     }
 
-    sprintf(query, "update chars set name='%s' where name='%s'", to, name);
+    snprintf(query, sizeof(query), "update chars set name='%s' where name='%s'", to, name);
     if (mysql_query_con(&mysql, query)) {
         tell_chat(0, masterID, 1, "Failed to change name: Error: %s (%d)", mysql_error(&mysql), mysql_errno(&mysql));
         return;
@@ -3141,7 +3141,7 @@ void db_rename(char *name, char *master_to) {
     nr = mysql_affected_rows(&mysql);
 
 #ifdef CHARINFO
-    sprintf(query, "update charinfo set name='%s' where name='%s'", to, name);
+    snprintf(query, sizeof(query), "update charinfo set name='%s' where name='%s'", to, name);
     if (mysql_query_con(&mysql, query)) {
         elog("Failed to change name in charinfo: Error: %s (%d)", mysql_error(&mysql), mysql_errno(&mysql));
         return;

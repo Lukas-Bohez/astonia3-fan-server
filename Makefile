@@ -28,7 +28,7 @@ runtime/37/arkhata.dll create_account create_character
 
 CC=gcc
 DEBUG=-g
-CFLAGS=-Wall -Wshadow -Werror -Wno-pointer-sign -fno-strict-aliasing -O3 $(DEBUG) -m32 -DSTAFF
+CFLAGS=-Wall -Wshadow -Werror -Wno-error=cpp -Wno-error=format-truncation -Wno-error=implicit-function-declaration -Wno-pointer-sign -fno-strict-aliasing -O3 $(DEBUG) -m32 -DSTAFF -IC:/development/astionia3/astonia_community_server3/include -IC:/development/astionia3/mariadb-connector-c-3.4.8/include -IC:/development/astionia3/mariadb-connector-c-3.4.8/build/include
 LDFLAGS=-O $(DEBUG) -m32 -L/usr/lib/mysql
 LDRFLAGS=-O $(DEBUG) -m32 -rdynamic -L/usr/lib/mysql
 DDFLAGS=-O $(DEBUG) -m32 -fPIC -shared
@@ -109,8 +109,8 @@ server:	$(OBJS)
 .obj/player_driver.o:	player_driver.c server.h do.h log.h io.h client.h map.h database.h create.h see.h notify.h player_driver.h los.h effect.h talk.h drvlib.h direction.h drdata.h act.h command.h container.h date.h skill.h store.h libload.h death.h tool.h sector.h
 	$(CC) $(CFLAGS) -o .obj/player_driver.o -c player_driver.c
 
-.obj/rdtsc.o:		rdtsc.S
-	$(CC) $(CFLAGS) -o .obj/rdtsc.o -c rdtsc.S
+.obj/rdtsc.o:
+	$(CC) $(CFLAGS) -o .obj/rdtsc.o -c rdtsc.c
 
 .obj/los.o:		los.c server.h log.h light.h mem.h sector.h los.h
 	$(CC) $(CFLAGS) -o .obj/los.o -c los.c

@@ -23,6 +23,31 @@
 #include <malloc.h>
 #include <time.h>
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#include <process.h>
+
+/* Minimal POSIX stubs for Windows build */
+struct mallinfo { int arena; int ordblks; int uordblks; int fordblks; int hblks; int hblkhd; };
+static inline struct mallinfo mallinfo(void) { struct mallinfo m = {0}; return m; }
+static inline void *sbrk(intptr_t increment) { (void)increment; return (void*)-1; }
+static inline int setsid(void) { return 0; }
+#ifndef SIGPIPE
+#define SIGPIPE 0
+#endif
+#ifndef SIGHUP
+#define SIGHUP 0
+#endif
+#ifndef SIGQUIT
+#define SIGQUIT 0
+#endif
+#ifndef SIGTSTP
+#define SIGTSTP 0
+#endif
+#endif
+
 #include "server.h"
 #include "client.h"
 #include "player.h"

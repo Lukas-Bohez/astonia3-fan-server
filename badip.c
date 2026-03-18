@@ -12,8 +12,6 @@
 #include <time.h>
 #include <errno.h>
 #include <math.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>

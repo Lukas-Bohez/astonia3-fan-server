@@ -29,8 +29,16 @@
 #define LAGOUT_TIME (5 * 60 * TICKS) // time it takes to lag out (time difference between loss of connection and removal of character from server)
 #define REGEN_TIME (4 * TICKS) // time character has to be idle to start regenerating
 
+#ifndef max
 #define max(a, b) ((a) > (b) ? (a) : (b))
+#endif
+#ifndef min
 #define min(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
+#ifdef _WIN32
+#define bzero(ptr, n) memset((ptr), 0, (n))
+#endif
 
 #define RANDOM(a) (rand() % (a))
 
@@ -289,6 +297,7 @@ extern struct item *it;
 #define V_ENDURANCE 1
 #define V_MANA 2
 #define V_WIS 3
+#undef V_INT
 #define V_INT 4
 #define V_AGI 5
 #define V_STR 6

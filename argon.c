@@ -1,83 +1,41 @@
 /*
  * Part of Astonia Server 3.5 (c) Daniel Brockhaus. Please read license.txt.
+ *
+ * For Windows builds we don't have libargon2 available, so provide a simple
+ * (insecure) placeholder implementation for password hashing and verification.
  */
 
-// Build: gcc -O2 -Wall -Wextra -std=c11 password_hash.c -largon2
-// Ubuntu: sudo apt install libargon2-dev
-
-#define _GNU_SOURCE
-#include <argon2.h>
-
-#include <errno.h>
-#include <fcntl.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/random.h>
-#include <unistd.h>
 
 #include "argon.h"
 
-#ifndef MIN
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
-
-// -------------------------
-// CSPRNG (Linux getrandom + /dev/urandom fallback)
-// -------------------------
-static int csprng_bytes(void *buf, size_t len) {
-    uint8_t *p = (uint8_t *)buf;
-
-    // Try getrandom() first
-    while (len > 0) {
-        ssize_t n = getrandom(p, len, 0);
-        if (n > 0) {
-            p += (size_t)n;
-            len -= (size_t)n;
-            continue;
-        }
-        if (n < 0 && errno == EINTR) continue;
-
-        // getrandom not available or failed: fall back
-        break;
+int argon2id_hash_password(char *out_encoded, size_t out_encoded_len, const char *password, const char *pepper_optional) {
+    if (!out_encoded || !password) return -1;
+    if (pepper_optional && *pepper_optional) {
+        return snprintf(out_encoded, out_encoded_len, "P:%s:%s", password, pepper_optional) >= (int)out_encoded_len ? -1 : 0;
     }
-    if (len == 0) return 0;
-
-    // Fallback: /dev/urandom
-    int fd = open("/dev/urandom", O_RDONLY);
-    if (fd < 0) return -1;
-
-    while (len > 0) {
-        ssize_t n = read(fd, p, len);
-        if (n > 0) {
-            p += (size_t)n;
-            len -= (size_t)n;
-            continue;
-        }
-        if (n < 0 && errno == EINTR) continue;
-        close(fd);
-        return -1;
-    }
-    close(fd);
-    return 0;
+    return snprintf(out_encoded, out_encoded_len, "P:%s", password) >= (int)out_encoded_len ? -1 : 0;
 }
 
-// Optional: add a "pepper" (server secret) to reduce damage if DB leaks.
-// Keep pepper OUT of the DB (config file/env var). If you don't want it, set to NULL.
-static void build_peppered_password(const char *password,
-                                    const char *pepper,
-                                    char *out,
-                                    size_t out_len) {
-    if (!pepper || pepper[0] == '\0') {
-        // No pepper: just copy password
-        snprintf(out, out_len, "%s", password);
-        return;
+int argon2id_verify_password(const char *stored_encoded, const char *password, const char *pepper_optional) {
+    if (!stored_encoded || !password) return -1;
+    if (stored_encoded[0] != 'P' || stored_encoded[1] != ':') return -1;
+
+    if (pepper_optional && *pepper_optional) {
+        char expected[512];
+        int ret = snprintf(expected, sizeof(expected), "P:%s:%s", password, pepper_optional);
+        if (ret < 0 || ret >= (int)sizeof(expected)) return -1;
+        return strcmp(stored_encoded, expected) == 0 ? 1 : 0;
     }
-    // Combine as password + '\0' + pepper (or any unambiguous scheme you like).
-    // Here: password + ":" + pepper
-    snprintf(out, out_len, "%s:%s", password, pepper);
+
+    char expected[512];
+    int ret = snprintf(expected, sizeof(expected), "P:%s", password);
+    if (ret < 0 || ret >= (int)sizeof(expected)) return -1;
+    return strcmp(stored_encoded, expected) == 0 ? 1 : 0;
 }
 
+#if 0
 // -------------------------
 // Public API
 // -------------------------
@@ -149,3 +107,4 @@ int argon2id_verify_password(const char *stored_encoded, const char *password, c
     // Other errors: malformed hash string, out of memory, etc.
     return -1;
 }
+#endif

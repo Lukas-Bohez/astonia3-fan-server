@@ -342,8 +342,9 @@ void tick_chat(void) {
                 delay = 100;
                 state = 0;
             } else if (FD_ISSET(sock, &fd_out)) {
-                unsigned int sol, sollen = 4;
-                if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &sol, &sollen)) {
+                int sol = 0;
+                int sollen = sizeof(sol);
+                if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&sol, &sollen)) {
                     close(sock);
                     delay = 100;
                     state = 0;

@@ -26,6 +26,10 @@
 #pragma GCC diagnostic ignored "-Wunused-result"
 
 int sendmail(char *to, char *subject, char *body, char *from, int do_copy) {
+#ifdef _WIN32
+    (void)to; (void)subject; (void)body; (void)from; (void)do_copy;
+    return 0;
+#else
     int in[2], pid, sock;
     char tmp[256];
 
@@ -70,6 +74,7 @@ int sendmail(char *to, char *subject, char *body, char *from, int do_copy) {
     close(sock);
 
     return 1;
+#endif
 }
 
 #pragma GCC diagnostic pop
