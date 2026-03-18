@@ -310,21 +310,19 @@ int init_io(void) {
     ioctl(sock, FIONBIO, (u_long *)&one); // non-blocking mode
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char *)&one, sizeof(int));
 
-    /* If a port was specified via command line (-p), try to bind it first. */
+    /* If a port was specified via command line (-p), bind it and fail if unavailable. */
     if (server_port > 0) {
         addr.sin_family = AF_INET;
         addr.sin_port = htons(server_port);
         addr.sin_addr.s_addr = 0;
 
-        if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
-            port = server_port;
-        } else {
-            xlog("Warning: failed to bind requested port %d, falling back to auto-range", server_port);
-            port = 0;
+        if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
+            xlog("ERROR: could not bind requested port %d", server_port);
+            close(sock);
+            return 0;
         }
-    }
-
-    if (!port) {
+        port = server_port;
+    } else {
         for (port = 5556; port < 5600; port++) {
             addr.sin_family = AF_INET;
             addr.sin_port = htons(port);
