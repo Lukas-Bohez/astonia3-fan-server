@@ -1,0 +1,33 @@
+# Build artifacts
+**/server.exe
+**/astonia-launcher.exe
+**/moac.exe
+**/bin/*.exe
+**/bin/*.dll
+**/bin/*.pdb
+**/bin/*.so
+**/bin/*.dylib
+**/build/**
+**/dist/**
+**/.obj/**
+
+# Toolchain / dependencies (don’t vendor these)
+winlibs-i686/
+mariadb-connector-c-3.4.8/
+zlib-1.2.13/
+downloadsRequirements/
+*.zip
+
+# Git internals
+**/.git
+**/.git*/
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
