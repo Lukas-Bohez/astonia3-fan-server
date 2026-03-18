@@ -17,7 +17,7 @@ param(
     [int]$Port = 3200,
     [int]$WaitSeconds = 10,
     [string]$ServerExe = "$PSScriptRoot\server.exe",
-    [string]$ClientExe = "$PSScriptRoot\..\astonia_community_client\bin\moac.exe"
+    [string]$ClientExe = "$PSScriptRoot\astonia_community_client\bin\moac.exe"
 )
 
 function Write-Status {
