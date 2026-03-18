@@ -291,7 +291,8 @@ void io_loop(void) {
 }*/
 
 int init_io(void) {
-    int sock, port;
+    int sock;
+    int port = 0;
     u_long one = 1;
     struct sockaddr_in addr;
 
@@ -309,12 +310,28 @@ int init_io(void) {
     ioctl(sock, FIONBIO, (u_long *)&one); // non-blocking mode
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char *)&one, sizeof(int));
 
-    for (port = 5556; port < 5600; port++) {
+    /* If a port was specified via command line (-p), try to bind it first. */
+    if (server_port > 0) {
         addr.sin_family = AF_INET;
-        addr.sin_port = htons(port);
+        addr.sin_port = htons(server_port);
         addr.sin_addr.s_addr = 0;
 
-        if (!bind(sock, (struct sockaddr *)&addr, sizeof(addr))) break;
+        if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
+            port = server_port;
+        } else {
+            xlog("Warning: failed to bind requested port %d, falling back to auto-range", server_port);
+            port = 0;
+        }
+    }
+
+    if (!port) {
+        for (port = 5556; port < 5600; port++) {
+            addr.sin_family = AF_INET;
+            addr.sin_port = htons(port);
+            addr.sin_addr.s_addr = 0;
+
+            if (!bind(sock, (struct sockaddr *)&addr, sizeof(addr))) break;
+        }
     }
 
     if (listen(sock, 50)) return 0;

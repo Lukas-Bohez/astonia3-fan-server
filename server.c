@@ -212,7 +212,7 @@ int main(int argc, char *args[]) {
 
     if (argc > 1) {
         while (1) {
-            c = getopt(argc, args, "a:m:i:dhcs:f:e");
+            c = getopt(argc, args, "a:m:i:dhcs:f:ep:");
             if (c == -1) break;
 
             switch (c) {
@@ -243,6 +243,9 @@ int main(int argc, char *args[]) {
                 break;
             case 'e':
                 config_getenv();
+                break;
+            case 'p':
+                if (optarg) server_port = atoi(optarg);
                 break;
             }
         }
