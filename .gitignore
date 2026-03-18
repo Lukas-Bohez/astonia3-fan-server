@@ -8,6 +8,7 @@ motd.txt
 runtime/
 server
 server.exe
+launcher/astonia-launcher.exe
 update_server
 zones/generic/weapons.itm
 zones/generic/armor.itm
