@@ -54,7 +54,7 @@ function Set-PortForward {
         throw "Port forwarding requires Administrator privileges. Run PowerShell as Administrator."
     }
 
-    Write-Status "Adding port proxy: $ListenAddress:$ListenPort -> $ConnectAddress:$ConnectPort"
+    Write-Status "Adding port proxy: ${ListenAddress}:${ListenPort} -> ${ConnectAddress}:${ConnectPort}"
     netsh interface portproxy add v4tov4 listenaddress=$ListenAddress listenport=$ListenPort connectaddress=$ConnectAddress connectport=$ConnectPort
     Write-Status "Done. Use 'netsh interface portproxy show all' to verify."
 }
