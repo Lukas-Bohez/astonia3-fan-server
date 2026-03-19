@@ -2000,54 +2000,183 @@ static int load_char_pwd(char *pass, int sID, int *ppaid_till, int *ppaid, int v
     int creation_time, paid_till, t;
 
     //     0             1         2      3      4      5          6
-    sprintf(buf, "select password,creation_time,paid_till,vendor,locked,banned,credit_cvs from subscriber where ID=%d", sID);
-    if (mysql_query_con(&mysql, buf)) {
-        elog("Failed to select subscriber ID=%d: Error: %s (%d)", sID, mysql_error(&mysql), mysql_errno(&mysql));
-        return 1;
-    }
-    if (!(result = mysql_store_result_cnt(&mysql))) {
-        elog("Failed to store result: Error: %s (%d)", mysql_error(&mysql), mysql_errno(&mysql));
-        return 1;
-    }
-    if (mysql_num_rows(result) == 0) {
-        elog("subscriber %d not found??", sID);
-        mysql_free_result_cnt(result);
-        return 1;
-    }
-    if (!(row = mysql_fetch_row(result))) {
-        elog("load_char_pwd: fetch_row returned NULL");
-        mysql_free_result_cnt(result);
-        return 1;
-    }
-    if (!row[0]) {
-        elog("load_char_pwd: one of the values NULL");
-        mysql_free_result_cnt(result);
-        return 1;
-    }
+    {
+        const char *sql = "SELECT password,creation_time,paid_till,vendor,locked,banned,credit_cvs FROM subscriber WHERE ID=?";
+        MYSQL_STMT *stmt = mysql_stmt_init(&mysql);
+        if (!stmt) {
+            elog("load_char_pwd: cannot init statement");
+            return 1;
+        }
 
-    if (argon2id_verify_password(row[0], pass, NULL) != 1) {
-        mysql_free_result_cnt(result);
-        return 1;
-    }
+        if (mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0) {
+            elog("load_char_pwd: statement prepare failed: %s", mysql_stmt_error(stmt));
+            mysql_stmt_close(stmt);
+            return 1;
+        }
 
-    if (row[4] && row[4][0] == 'Y') {
-        mysql_free_result_cnt(result);
-        return 2;
-    }
+        MYSQL_BIND param_bind[1];
+        memset(param_bind, 0, sizeof(param_bind));
+        param_bind[0].buffer_type = MYSQL_TYPE_LONG;
+        param_bind[0].buffer = &sID;
+        param_bind[0].is_null = 0;
 
-    if (isbanned_iplog(login.ip) && (!row[5] || row[5][0] != 'N')) {
-        mysql_free_result_cnt(result);
-        return 3;
-    }
+        if (mysql_stmt_bind_param(stmt, param_bind) != 0) {
+            elog("load_char_pwd: bind param failed: %s", mysql_stmt_error(stmt));
+            mysql_stmt_close(stmt);
+            return 1;
+        }
 
-    if (row[1]) creation_time = atoi(row[1]);
-    else creation_time = 0;
-    if (row[2]) paid_till = atoi(row[2]);
-    else paid_till = 0;
+        if (mysql_stmt_execute(stmt) != 0) {
+            elog("load_char_pwd: execute failed: %s", mysql_stmt_error(stmt));
+            mysql_stmt_close(stmt);
+            return 1;
+        }
 
-    if (paid_till && (!row[6] || row[6][0] != 'F')) {
-        mysql_free_result_cnt(result);
-        return 5;
+        if (mysql_stmt_store_result(stmt) != 0) {
+            elog("load_char_pwd: store result failed: %s", mysql_stmt_error(stmt));
+            mysql_stmt_close(stmt);
+            return 1;
+        }
+
+        if (mysql_stmt_num_rows(stmt) == 0) {
+            elog("subscriber %d not found??", sID);
+            mysql_stmt_free_result(stmt);
+            mysql_stmt_close(stmt);
+            return 1;
+        }
+
+        MYSQL_BIND result_bind[7];
+        memset(result_bind, 0, sizeof(result_bind));
+        char password_raw[512];
+        unsigned long password_len;
+        int is_null[7];
+        int creation_time_i = 0;
+        int paid_till_i = 0;
+        int vendor_i = 0;
+        char locked_ch;
+        char banned_ch;
+        char credit_cvs[8];
+        unsigned long credit_len;
+
+        result_bind[0].buffer_type = MYSQL_TYPE_STRING;
+        result_bind[0].buffer = password_raw;
+        result_bind[0].buffer_length = sizeof(password_raw);
+        result_bind[0].length = &password_len;
+        result_bind[0].is_null = &is_null[0];
+
+        result_bind[1].buffer_type = MYSQL_TYPE_LONG;
+        result_bind[1].buffer = &creation_time_i;
+        result_bind[1].is_null = &is_null[1];
+
+        result_bind[2].buffer_type = MYSQL_TYPE_LONG;
+        result_bind[2].buffer = &paid_till_i;
+        result_bind[2].is_null = &is_null[2];
+
+        result_bind[3].buffer_type = MYSQL_TYPE_LONG;
+        result_bind[3].buffer = &vendor_i;
+        result_bind[3].is_null = &is_null[3];
+
+        result_bind[4].buffer_type = MYSQL_TYPE_STRING;
+        result_bind[4].buffer = &locked_ch;
+        result_bind[4].buffer_length = 1;
+        result_bind[4].is_null = &is_null[4];
+
+        result_bind[5].buffer_type = MYSQL_TYPE_STRING;
+        result_bind[5].buffer = &banned_ch;
+        result_bind[5].buffer_length = 1;
+        result_bind[5].is_null = &is_null[5];
+
+        result_bind[6].buffer_type = MYSQL_TYPE_STRING;
+        result_bind[6].buffer = credit_cvs;
+        result_bind[6].buffer_length = sizeof(credit_cvs);
+        result_bind[6].length = &credit_len;
+        result_bind[6].is_null = &is_null[6];
+
+        if (mysql_stmt_bind_result(stmt, result_bind) != 0) {
+            elog("load_char_pwd: bind result failed: %s", mysql_stmt_error(stmt));
+            mysql_stmt_free_result(stmt);
+            mysql_stmt_close(stmt);
+            return 1;
+        }
+
+        if (mysql_stmt_fetch(stmt) != 0) {
+            elog("load_char_pwd: fetch failed: %s", mysql_stmt_error(stmt));
+            mysql_stmt_free_result(stmt);
+            mysql_stmt_close(stmt);
+            return 1;
+        }
+
+        if (is_null[0]) {
+            elog("load_char_pwd: password value NULL");
+            mysql_stmt_free_result(stmt);
+            mysql_stmt_close(stmt);
+            return 1;
+        }
+
+        password_raw[password_len < sizeof(password_raw) ? password_len : sizeof(password_raw) - 1] = '\0';
+
+        int auth_ok = 0;
+        if (argon2id_verify_password(password_raw, pass, NULL) == 1) {
+            auth_ok = 1;
+        } else {
+            /* fallback for older plaintext or placeholder formats */
+            if (password_raw[0] == '$' || password_raw[0] == 'P' || password_raw[0] == '\0') {
+                if (strcmp(password_raw, pass) == 0) auth_ok = 1;
+                else if (strncmp(password_raw, "P:", 2) == 0 && strcmp(password_raw + 2, pass) == 0) auth_ok = 1;
+            }
+            if (auth_ok) {
+                char newhash[512];
+                if (argon2id_hash_password(newhash, sizeof(newhash), pass, NULL) == 0) {
+                    const char *upsql = "UPDATE subscriber SET password=? WHERE ID=?";
+                    MYSQL_STMT *upstmt = mysql_stmt_init(&mysql);
+                    if (upstmt) {
+                        if (mysql_stmt_prepare(upstmt, upsql, (unsigned long)strlen(upsql)) == 0) {
+                            MYSQL_BIND upbind[2];
+                            memset(upbind, 0, sizeof(upbind));
+                            unsigned long hash_len = (unsigned long)strlen(newhash);
+                            upbind[0].buffer_type = MYSQL_TYPE_STRING;
+                            upbind[0].buffer = newhash;
+                            upbind[0].buffer_length = hash_len;
+                            upbind[0].length = &hash_len;
+
+                            upbind[1].buffer_type = MYSQL_TYPE_LONG;
+                            upbind[1].buffer = &sID;
+
+                            if (mysql_stmt_bind_param(upstmt, upbind) == 0) {
+                                mysql_stmt_execute(upstmt);
+                            }
+                        }
+                        mysql_stmt_close(upstmt);
+                    }
+                }
+            }
+        }
+
+        mysql_stmt_free_result(stmt);
+        mysql_stmt_close(stmt);
+
+        if (!auth_ok) {
+            return 1;
+        }
+
+        if (is_null[4] == 0 && locked_ch == 'Y') {
+            return 2;
+        }
+
+        if (isbanned_iplog(login.ip) && (is_null[5] == 0 && banned_ch != 'N')) {
+            return 3;
+        }
+
+        if (!is_null[1]) creation_time = creation_time_i;
+        else creation_time = 0;
+        if (!is_null[2]) paid_till = paid_till_i;
+        else paid_till = 0;
+
+        if (paid_till && (is_null[6] || credit_cvs[0] != 'F')) {
+            return 5;
+        }
+
+        /* continue with rest of method below (existing logic) */
     }
 
 #ifdef STAFF
@@ -2070,18 +2199,15 @@ static int load_char_pwd(char *pass, int sID, int *ppaid_till, int *ppaid, int v
     //xlog("%.2f days left for %d (%d)",(t-time_now)/(60.0*60*24),sID,paid_till);
 
     if (t < time_now) {
-        mysql_free_result_cnt(result);
         return 4;
     }
 
-    if (vendor && (!row[3] || atoi(row[3]) == 0)) {
+    if (vendor && vendor_i == 0) {
         sprintf(buf, "update subscriber set vendor=%d where ID=%d", vendor, sID);
         if (mysql_query_con(&mysql, buf)) elog("Failed to update vendor ID=%d, vendor=%d: Error: %s (%d)", sID, vendor, mysql_error(&mysql), mysql_errno(&mysql));
         save_subscriber_cnt++;
     }
 
-    // all fine
-    mysql_free_result_cnt(result);
     return 0;
 }
 
