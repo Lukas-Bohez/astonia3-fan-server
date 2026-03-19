@@ -70,7 +70,7 @@ static void OnStartServer()
 static void OnStartClient()
 {
     wchar_t clientPath[MAX_PATH];
-    PathCombineW(clientPath, g_basePath, L"astonia_community_client\\bin\\moac.exe");
+    PathCombineW(clientPath, g_basePath, L"astonia_community_server3\\astonia_community_client\\bin\\moac.exe");
 
     wchar_t host[128] = L"";
     GetEditText(hServerHostEdit, host, _countof(host));

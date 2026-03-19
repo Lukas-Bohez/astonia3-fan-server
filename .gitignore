@@ -1,3 +1,4 @@
+# Build artifacts
 .obj/
 chatserver
 create_account
@@ -7,8 +8,9 @@ create_weapons
 motd.txt
 runtime/
 server
-server.exe
+**/server.exe
 launcher/astonia-launcher.exe
+**/astonia-launcher.exe
 update_server
 zones/generic/weapons.itm
 zones/generic/armor.itm
@@ -20,3 +22,33 @@ zones/generic/armor.itm
 *.vpwhist
 *.vtg
 .serverkey
+**/moac.exe
+**/bin/*.exe
+**/bin/*.dll
+**/bin/*.pdb
+**/bin/*.so
+**/bin/*.dylib
+**/build/**
+**/dist/**
+**/.obj/**
+
+# Toolchain / dependencies (don’t vendor these)
+winlibs-i686/
+mariadb-connector-c-3.4.8/
+zlib-1.2.13/
+downloadsRequirements/
+*.zip
+
+# Git internals
+**/.git
+**/.git*/
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store

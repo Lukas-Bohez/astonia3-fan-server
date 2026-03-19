@@ -1,0 +1,48 @@
+CC=C:/development/astionia3/winlibs-i686/mingw32/bin/gcc
+DEBUG=-g
+# Removed -m32 flags for MinGW build on Windows
+CFLAGS=-Wall -Wshadow -Werror -Wno-pointer-sign -fno-strict-aliasing -O3 $(DEBUG) -DSTAFF \
+	-IC:/development/astionia3/astonia_community_server3/include \
+	-IC:/development/astionia3/mariadb-connector-c-3.4.8/include \
+	-IC:/development/astionia3/mariadb-connector-c-3.4.8/build/include \
+	-IC:/development/astionia3/zlib-1.2.13
+LDFLAGS=-O $(DEBUG) \
+	-LC:/development/astionia3/winlibs-i686/mingw32/i686-w64-mingw32/lib \
+	-LC:/development/astionia3/mariadb-connector-c-3.4.8/build/libmariadb \
+	-LC:/development/astionia3/mariadb-connector-c-3.4.8/build/external/zlib
+LDRFLAGS=$(LDFLAGS)
+DDFLAGS=-O $(DEBUG) -fPIC -shared
+DFLAGS=$(CFLAGS) -fPIC
+
+# Build objects similarly to the upstream Makefile
+OBJS=.obj/server.o .obj/io.o .obj/libload.o .obj/tool.o .obj/sleep.o \
+	.obj/log.o .obj/create.o .obj/notify.o .obj/skill.o .obj/do.o \
+	.obj/act.o .obj/player.o .obj/rdtsc.o .obj/los.o .obj/light.o \
+	.obj/map.o .obj/path.o .obj/error.o .obj/talk.o .obj/drdata.o \
+	.obj/death.o .obj/database.o .obj/see.o .obj/drvlib.o .obj/timer.o \
+	.obj/expire.o .obj/effect.o .obj/command.o .obj/date.o \
+	.obj/container.o .obj/store.o .obj/mem.o .obj/sector.o \
+	.obj/chat.o .obj/statistics.o .obj/mail.o .obj/player_driver.o .obj/clan.o \
+	.obj/lookup.o .obj/area.o .obj/task.o .obj/punish.o .obj/depot.o \
+	.obj/prof.o .obj/motd.o .obj/ignore.o .obj/tell.o .obj/clanlog.o \
+	.obj/respawn.o .obj/poison.o .obj/swear.o .obj/lab.o .obj/consistency.o \
+	.obj/btrace.o .obj/club.o .obj/teufel_pk.o .obj/questlog.o .obj/badip.o \
+	.obj/argon.o .obj/config.o
+
+# Use the same targets as the original Makefile but prefer local toolchain
+all: server
+
+server: $(OBJS)
+	@echo "Building server (Windows/MinGW) with CC=$(CC)"
+	$(CC) $(LDRFLAGS) -o server $(OBJS) -lmariadbclient -lm -lwinpthread -lws2_32 -lsecur32 -lcrypt32 -lbcrypt -lshlwapi -lzlib
+
+.obj/%.o: %.c
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+.obj/%.o: %.S
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+.PHONY: objs
+objs:
+	@echo "Compiling object files (will use existing rules from Makefile)"
+	@echo "Run 'msys bash' and then 'make objs' to compile objects using this toolchain."

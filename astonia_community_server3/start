@@ -1,0 +1,27 @@
+#!/bin/sh
+
+pkill chatserver
+pkill server
+sleep 1
+
+# Chatserver needs to run first
+echo chatserver
+./chatserver >/dev/null &
+sleep 1
+
+# Start all the areas
+./server -a 1 -d
+sleep 1
+./server -a 2 -d
+sleep 1
+./server -a 3 -d
+sleep 1
+./server -a 14 -d
+sleep 1
+./server -a 33 -d
+# ... add them all here for a full server
+
+echo Done
+
+# You can probably remove all the sleep commands, I prefer to stagger stuff to avoid
+# stutters on other services running on the same host
