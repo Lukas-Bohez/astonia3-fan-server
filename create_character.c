@@ -137,6 +137,7 @@ void help(char *prog) {
 int main(int argc, char **args) {
     int c;
 
+    config_init();
     while (1) {
         c = getopt(argc, args, "s:f:e");
         if (c == -1) break;

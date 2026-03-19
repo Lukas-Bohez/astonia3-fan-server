@@ -48,6 +48,10 @@ downloadsRequirements/
 
 # Logs
 *.log
+logs/
+
+# Config secrets
+config/server.conf
 
 # OS
 Thumbs.db

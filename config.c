@@ -12,10 +12,29 @@
 struct config_data config_data = {
     .dbhost = "localhost",
     .dbuser = "root",
-    .dbpass = "tgbdwf3h",
+    .dbpass = "",
     .dbname = "merc",
     .chathost = "localhost",
-    .svrkey = "4241"};
+    .svrkey = ""};
+
+void config_init(void) {
+    const char *path = getenv("AS3_CONFIG_FILE");
+    if (!path) path = "config/server.conf";
+
+    FILE *fp = fopen(path, "r");
+    if (fp) {
+        char buf[MAXLINE];
+        while (fgets(buf, MAXLINE, fp)) {
+            config_string(buf);
+        }
+        fclose(fp);
+    } else if (getenv("AS3_CONFIG_FILE")) {
+        fprintf(stderr, "Could not open config file '%s'.\n", path);
+        exit(1);
+    }
+
+    config_getenv();
+}
 
 void config_set_name(char *name, char *value) {
     if (!strcmp(name, "dbhost")) {

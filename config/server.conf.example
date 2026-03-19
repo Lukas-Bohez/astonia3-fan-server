@@ -1,0 +1,26 @@
+# Astonia 3 Fan Server configuration template
+
+# Database
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=merc
+DB_USER=root
+DB_PASS=astonia
+
+# Network binding
+SERVER_HOST=0.0.0.0
+SERVER_PORT=5556
+CHAT_PORT=5554
+
+# Security settings
+ENABLE_TLS=false
+TLS_CERT_PATH=./tls/server.crt
+TLS_KEY_PATH=./tls/server.key
+
+# Game settings
+RUN_AS_DAEMON=false
+LOG_LEVEL=info
+
+# Advanced
+MAX_PLAYERS=500
+ZONE_PERSISTENCE=true

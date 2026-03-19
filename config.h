@@ -12,3 +12,4 @@ extern struct config_data config_data;
 void config_string(char *buf);
 void config_file(char *file);
 void config_getenv(void);
+void config_init(void);

@@ -30,10 +30,10 @@ void help(char *prog) {
 }
 
 int main(int argc, char **args) {
-    char buf[512];
-    char hash[256];
+    char hash[512];
     int c;
 
+    config_init();
     while (1) {
         c = getopt(argc, args, "s:f:e");
         if (c == -1) break;
@@ -68,21 +68,61 @@ int main(int argc, char **args) {
         return 2;
     }
 
-    sprintf(buf, "insert subscriber (email,password,creation_time,locked,banned,vendor) values ("
-                 "'%s'," // email
-                 "'%s'," // password
-                 "%d," // creation time
-                 "'N'," // locked
-                 "'I'," // banned
-                 "%d)", // vendor
-            args[optind], hash, (int)time(NULL), 0);
+    {
+        const char *sql = "INSERT INTO subscriber (email,password,creation_time,locked,banned,vendor) VALUES (?, ?, ?, 'N', 'I', ?)";
+        MYSQL_STMT *stmt = mysql_stmt_init(&mysql);
+        if (!stmt) {
+            fprintf(stderr, "Failed to init statement: %s\n", mysql_error(&mysql));
+            return 2;
+        }
 
-    if (mysql_query(&mysql, buf)) {
-        fprintf(stderr, "Failed to create subscriber: Error: %s (%d)", mysql_error(&mysql), mysql_errno(&mysql));
-        return 2;
+        if (mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0) {
+            fprintf(stderr, "Failed to prepare statement: %s (%d)\n", mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+            mysql_stmt_close(stmt);
+            return 2;
+        }
+
+        MYSQL_BIND bind[4];
+        memset(bind, 0, sizeof(bind));
+
+        unsigned long email_len = (unsigned long)strlen(args[optind]);
+        unsigned long hash_len = (unsigned long)strlen(hash);
+        int creation_time = (int)time(NULL);
+        int vendor = 0;
+
+        bind[0].buffer_type = MYSQL_TYPE_STRING;
+        bind[0].buffer = args[optind];
+        bind[0].buffer_length = email_len;
+        bind[0].length = &email_len;
+
+        bind[1].buffer_type = MYSQL_TYPE_STRING;
+        bind[1].buffer = hash;
+        bind[1].buffer_length = hash_len;
+        bind[1].length = &hash_len;
+
+        bind[2].buffer_type = MYSQL_TYPE_LONG;
+        bind[2].buffer = &creation_time;
+
+        bind[3].buffer_type = MYSQL_TYPE_LONG;
+        bind[3].buffer = &vendor;
+
+        if (mysql_stmt_bind_param(stmt, bind) != 0) {
+            fprintf(stderr, "Failed to bind params: %s (%d)\n", mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+            mysql_stmt_close(stmt);
+            return 2;
+        }
+
+        if (mysql_stmt_execute(stmt) != 0) {
+            fprintf(stderr, "Failed to create subscriber: Error: %s (%d)\n", mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+            mysql_stmt_close(stmt);
+            return 2;
+        }
+
+        unsigned long long inserted_id = mysql_insert_id(&mysql);
+        printf("Success. Account ID is %llu.\n", inserted_id);
+
+        mysql_stmt_close(stmt);
     }
-
-    printf("Success. Account ID is %d.\n", (int)mysql_insert_id(&mysql));
 
     exit_database();
 

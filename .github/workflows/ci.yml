@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libmysqlclient-dev libargon2-dev
+
+      - name: Create build directory
+        run: mkdir -p build
+
+      - name: Configure with CMake
+        run: |
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_WARNINGS=ON
+
+      - name: Build the project
+        run: |
+          cd build
+          cmake --build . --parallel 2
+
+      - name: Run static checks
+        run: |
+          cd build
+          if command -v cppcheck >/dev/null 2>&1; then
+            cppcheck --enable=warning,performance,portability,style --project=compile_commands.json --suppress=missingIncludeSystem ..
+          else
+            echo "cppcheck not found; skip static check"
+          fi
+
+      - name: Run unit smoke tests (if any)
+        run: |
+          if [[ -x "build/bin/astonia3-server" ]]; then
+            echo "Server binary exists"
+          else
+            echo "No server binary found, check build output"; exit 1
+          fi
