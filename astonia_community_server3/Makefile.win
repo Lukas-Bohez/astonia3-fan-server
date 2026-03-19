@@ -1,4 +1,4 @@
-CC=C:/development/astionia3/winlibs-i686/mingw32/bin/gcc
+CC=C:/mingw32/mingw32/bin/gcc
 DEBUG=-g
 # Removed -m32 flags for MinGW build on Windows
 CFLAGS=-Wall -Wshadow -Werror -Wno-pointer-sign -fno-strict-aliasing -O3 $(DEBUG) -DSTAFF \
@@ -7,7 +7,7 @@ CFLAGS=-Wall -Wshadow -Werror -Wno-pointer-sign -fno-strict-aliasing -O3 $(DEBUG
 	-IC:/development/astionia3/mariadb-connector-c-3.4.8/build/include \
 	-IC:/development/astionia3/zlib-1.2.13
 LDFLAGS=-O $(DEBUG) \
-	-LC:/development/astionia3/winlibs-i686/mingw32/i686-w64-mingw32/lib \
+	-LC:/mingw32/mingw32/i686-w64-mingw32/lib \
 	-LC:/development/astionia3/mariadb-connector-c-3.4.8/build/libmariadb \
 	-LC:/development/astionia3/mariadb-connector-c-3.4.8/build/external/zlib
 LDRFLAGS=$(LDFLAGS)
