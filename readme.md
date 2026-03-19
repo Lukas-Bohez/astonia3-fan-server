@@ -1,72 +1,49 @@
-# Astonia 3 Server, Community Editon
+# Astonia3 Monorepo (Server + Client)
 
-## Warning
-Do not deploy on an existing database! At the very least the hashed password
-will prevent anyone from logging in and there might be more changes to the
-table structure eventually.
+This repository contains both the **Astonia 3 server** and the **Astonia 3 community client**, plus a small GUI launcher to start them together.
 
-## Building
+## Structure
 
-### Ubuntu
-To run under Ubuntu 22.04.4 LTS (tested and working as of 2024.06.27)
+- `astonia_community_server3/` - Server source and build scripts
+- `astonia_community_server3/astonia_community_client/` - Client source and build scripts (moved inside server folder)
+- `launcher/` - Simple Windows GUI launcher that starts server + client
 
-```
-sudo apt-get update
-sudo apt install git
-git clone https://github.com/AstoniaCommunity/astonia_community_server3.git
-sudo apt-get install gcc-multilib
-sudo dpkg --add-architecture i386
-sudo apt-get update # yes, we need to run this again to get the i386 packages
-sudo apt install make
-sudo apt install lib32z-dev libargon2-dev:i386
-sudo apt install libmysqlclient-dev:i386
-sudo apt install mariadb-server
-cat MYSQLPASSWD
-sudo mysql_secure_installation
-# old root password is blank. new root password from 'cat MYSQLPASSWD'.
-# do not switch to unix sockets
-./my <create_tables.sql 
-./my merc <merc.sql 
-./my merc <storage.sql 
-echo "Welcome to Astonia" >motd.txt
-rm MYSQLPASSWD
-# the "my" script is very handy, but also a security risk!
-make -j 4
-./server
-# look for errors, then hit CTRL-C to stop
-./start # will start all areas and the chatserver
-./create_account <email> <password>
-./create_character 1 Ishtar MWG
+## Quick Start (Windows)
+
+### 1) Build the server (MinGW)
+
+```powershell
+cd .\astonia_community_server3
+..\winlibs-i686\mingw32\bin\mingw32-make.exe -f Makefile.win
 ```
 
-Now you should be able to connect to the server with a client, using
-something like:
+### 2) Build the client (MSYS2 / Clang)
 
-```
-bin\moac -uIshtar -p<password> -d<server IP or name> -v35
-```
+From within MSYS2 (clang shell):
 
-Finally, you should setup your firewall. This isn't technically part of this
-guide, but it might be... wise.
-```
-sudo ufw allow 22/tcp
-sudo ufw deny 5554/tcp
-sudo ufw deny 3306/tcp
-sudo ufw allow 8080:8090/tcp
-sudo ufw allow 27584:27777/tcp
-sudo ufw enable
+```bash
+cd /c/development/astionia3/astonia_community_server3/astonia_community_client
+make
 ```
 
-If you want to be able to run "make pretty":
-```
-sudo apt-get install -y wget gnupg lsb-release software-properties-common
-wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/llvm.asc
-sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-21 main"
-sudo apt-get update
-sudo apt install clang-format-21
-sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-21 200
-sudo update-alternatives --set clang-format /usr/bin/clang-format-21
-clang-format --version
+### 3) Build the launcher
+
+```powershell
+cd ..\..\launcher
+..\winlibs-i686\mingw32\bin\mingw32-make.exe -f Makefile
 ```
 
-The last step should output a version starting with 21. now.
+### 4) Run server + client
+
+```powershell
+cd ..\astonia_community_server3
+..\launcher\astonia-launcher.exe
+```
+
+The launcher lets you choose the server host/port and will start the server and client in one click.
+
+## Notes
+
+- The server supports a `-p <port>` option so the launcher can start the server on a known port.
+- The launcher can also be used to connect to remote servers by setting the host.
+- Built artifacts like `*.exe` are ignored by `.gitignore`.
