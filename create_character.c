@@ -46,7 +46,8 @@ int create_char(int user_ID, char *new_user, char *class) {
     if (class[0] == 'M') flag |= CF_MALE;
     else flag |= CF_FEMALE;
 
-    mysql_real_escape_string(&mysql, data, (char *)&flag, sizeof(flag));
+    unsigned long data_len = mysql_real_escape_string(&mysql, data, (char *)&flag, sizeof(flag));
+    data[data_len] = '\0';
 
     size = 8 + 8 + strlen(new_user) + 15 * 4 + 1 + 3 * 2 + 1 + 6 - 20;
     expandto = ((size + (WANTSIZE - 1) + 9) / WANTSIZE) * WANTSIZE;
@@ -56,78 +57,152 @@ int create_char(int user_ID, char *new_user, char *class) {
     *(unsigned int *)(ddata + 4) = add - 8;
     memset(ddata + 8, 0, add - 8);
 
-    mysql_real_escape_string(&mysql, dbuf, ddata, add);
+    unsigned long dbuf_len = mysql_real_escape_string(&mysql, dbuf, ddata, add);
+    dbuf[dbuf_len] = '\0';
 
     mirror = RANDOM(26) + 1;
 
-    sprintf(buf, "insert chars values ("
-                 "0," // ID
-                 "'%s'," // name
-                 "%u," // class (aka flags)
-                 "0," // karma
-                 "0," // clan
-                 "0," // clan rank
-                 "0," // clan serial
-                 "0," // experience
-                 "0," // current_area
-                 "1," // allowed_area
-                 "%d," // creation_time
-                 "1," // login_time
-                 "1," // logout_time
-                 "'N'," // locked
-                 "%d," // sID
-                 "'%s'," // chr
-                 "'%s'," // item
-                 "'%s'," // ppd
-                 "%d," // mirror
-                 "0," // current mirror
-                 "1)", // spacer
-            new_user,
-            (unsigned int)(flag & 0xffffffff),
-            (int)time(NULL),
-            user_ID,
-            data,
-            data,
-            dbuf,
-            mirror);
-
-    if (mysql_query(&mysql, buf)) {
-        if (mysql_errno(&mysql) == ER_DUP_ENTRY) {
-            fprintf(stderr, "Sorry, the name %s is already taken.\n", new_user);
-            return 1;
-        } else {
-            fprintf(stderr, "Failed to create account %s: Error: %s (%d)\n", new_user, mysql_error(&mysql), mysql_errno(&mysql));
+    {
+        const char *sql = "INSERT INTO chars VALUES (0, ?, ?, 0, 0, 0, 0, 0, 0, 1, ?, 1, 1, 'N', ?, ?, ?, ?, ?, 0, 1)";
+        MYSQL_STMT *stmt = mysql_stmt_init(&mysql);
+        if (!stmt) {
+            fprintf(stderr, "Failed to init statement: %s\n", mysql_error(&mysql));
             return 2;
         }
-    } else {
-#ifdef CHARINFO
-        sprintf(buf, "insert charinfo values ("
-                     "%d," // ID
-                     "'%s'," // name
-                     "%u," // class (aka flags)
-                     "0," // karma
-                     "0," // clan
-                     "0," // clan rank
-                     "0," // clan serial
-                     "0," // experience
-                     "0," // current_area
-                     "%d," // creation_time
-                     "1," // login_time
-                     "1," // logout_time
-                     "'N'," // locked
-                     "%d)", // sID
-                (int)mysql_insert_id(&mysql),
-                new_user,
-                (unsigned int)(flag & 0xffffffff),
-                (int)time(NULL),
-                user_ID);
-        if (mysql_query(&mysql, buf)) {
-            fprintf(stderr, "Failed to create account %s: Error: %s (%d)\n", new_user, mysql_error(&mysql), mysql_errno(&mysql));
-        }
-#endif
-    }
 
-    return 0;
+        if (mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0) {
+            fprintf(stderr, "Failed to prepare statement: %s (%d)\n", mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+            mysql_stmt_close(stmt);
+            return 2;
+        }
+
+        MYSQL_BIND bind[8];
+        memset(bind, 0, sizeof(bind));
+
+        unsigned long name_len = (unsigned long)strlen(new_user);
+        unsigned long creation_time = (unsigned long)time(NULL);
+        unsigned long class_flag = (unsigned long)(flag & 0xffffffff);
+
+        bind[0].buffer_type = MYSQL_TYPE_STRING;
+        bind[0].buffer = new_user;
+        bind[0].buffer_length = name_len;
+        bind[0].length = &name_len;
+
+        bind[1].buffer_type = MYSQL_TYPE_LONG;
+        bind[1].buffer = (char *)&class_flag;
+
+        bind[2].buffer_type = MYSQL_TYPE_LONG;
+        bind[2].buffer = (char *)&creation_time;
+
+        bind[3].buffer_type = MYSQL_TYPE_LONG;
+        bind[3].buffer = (char *)&user_ID;
+
+        bind[4].buffer_type = MYSQL_TYPE_VAR_STRING;
+        bind[4].buffer = data;
+        bind[4].buffer_length = data_len;
+        bind[4].length = &data_len;
+
+        bind[5].buffer_type = MYSQL_TYPE_VAR_STRING;
+        bind[5].buffer = data;
+        bind[5].buffer_length = data_len;
+        bind[5].length = &data_len;
+
+        bind[6].buffer_type = MYSQL_TYPE_VAR_STRING;
+        bind[6].buffer = dbuf;
+        bind[6].buffer_length = dbuf_len;
+        bind[6].length = &dbuf_len;
+
+        bind[7].buffer_type = MYSQL_TYPE_LONG;
+        bind[7].buffer = (char *)&mirror;
+
+        if (mysql_stmt_bind_param(stmt, bind) != 0) {
+            fprintf(stderr, "Failed to bind chars params: %s (%d)\n", mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+            mysql_stmt_close(stmt);
+            return 2;
+        }
+
+        if (mysql_stmt_execute(stmt) != 0) {
+            unsigned int errnum = mysql_stmt_errno(stmt);
+            if (errnum == ER_DUP_ENTRY) {
+                fprintf(stderr, "Sorry, the name %s is already taken.\n", new_user);
+                mysql_stmt_close(stmt);
+                return 1;
+            }
+            fprintf(stderr, "Failed to create account %s: Error: %s (%d)\n", new_user, mysql_stmt_error(stmt), errnum);
+            mysql_stmt_close(stmt);
+            return 2;
+        }
+
+        mysql_stmt_close(stmt);
+    }
+    if (mysql_errno(&mysql) == ER_DUP_ENTRY) {
+        fprintf(stderr, "Sorry, the name %s is already taken.\n", new_user);
+        return 1;
+    } else {
+        fprintf(stderr, "Failed to create account %s: Error: %s (%d)\n", new_user, mysql_error(&mysql), mysql_errno(&mysql));
+        return 2;
+    }
+}
+else {
+#ifdef CHARINFO
+    {
+        const char *sql2 = "INSERT INTO charinfo VALUES (?, ?, ?, 0, 0, 0, 0, 0, 0, ?, 1, 1, 1, 'N', ?)";
+        MYSQL_STMT *stmt2 = mysql_stmt_init(&mysql);
+        if (!stmt2) {
+            fprintf(stderr, "Failed to init charinfo statement: %s\n", mysql_error(&mysql));
+            return 2;
+        }
+
+        if (mysql_stmt_prepare(stmt2, sql2, (unsigned long)strlen(sql2)) != 0) {
+            fprintf(stderr, "Failed to prepare charinfo statement: %s (%d)\n", mysql_stmt_error(stmt2), mysql_stmt_errno(stmt2));
+            mysql_stmt_close(stmt2);
+            return 2;
+        }
+
+        MYSQL_BIND bind2[5];
+        memset(bind2, 0, sizeof(bind2));
+
+        int insertedId = (int)mysql_insert_id(&mysql);
+        unsigned long name_len = (unsigned long)strlen(new_user);
+        unsigned long class_flag = (unsigned long)(flag & 0xffffffff);
+        unsigned long creation_time = (unsigned long)time(NULL);
+        int userID = user_ID;
+
+        bind2[0].buffer_type = MYSQL_TYPE_LONG;
+        bind2[0].buffer = &insertedId;
+
+        bind2[1].buffer_type = MYSQL_TYPE_STRING;
+        bind2[1].buffer = new_user;
+        bind2[1].buffer_length = name_len;
+        bind2[1].length = &name_len;
+
+        bind2[2].buffer_type = MYSQL_TYPE_LONG;
+        bind2[2].buffer = (char *)&class_flag;
+
+        bind2[3].buffer_type = MYSQL_TYPE_LONG;
+        bind2[3].buffer = (char *)&creation_time;
+
+        bind2[4].buffer_type = MYSQL_TYPE_LONG;
+        bind2[4].buffer = &userID;
+
+        if (mysql_stmt_bind_param(stmt2, bind2) != 0) {
+            fprintf(stderr, "Failed to bind charinfo params: %s (%d)\n", mysql_stmt_error(stmt2), mysql_stmt_errno(stmt2));
+            mysql_stmt_close(stmt2);
+            return 2;
+        }
+
+        if (mysql_stmt_execute(stmt2) != 0) {
+            fprintf(stderr, "Failed to create charinfo %s: Error: %s (%d)\n", new_user, mysql_stmt_error(stmt2), mysql_stmt_errno(stmt2));
+            mysql_stmt_close(stmt2);
+            // continue; // failure is nonfatal for charinfo
+        }
+
+        mysql_stmt_close(stmt2);
+    }
+#endif
+}
+
+return 0;
 }
 
 void help(char *prog) {
