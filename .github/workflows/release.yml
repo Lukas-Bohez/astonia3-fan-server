@@ -6,30 +6,49 @@ on:
 
 jobs:
   build-and-package:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake libmysqlclient-dev libargon2-dev
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            choco install -y cmake visualstudio2019buildtools argon2
+          else
+            sudo apt-get update
+            sudo apt-get install -y build-essential cmake libmysqlclient-dev libargon2-dev
+          fi
 
       - name: Configure and build
         run: |
           mkdir -p build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_ARGON2=ON
-          cmake --build . --parallel
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DUSE_ARGON2=ON
+            cmake --build . --config Release -- /m
+          else
+            cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_ARGON2=ON
+            cmake --build . --parallel
+          fi
 
       - name: Collect release binaries
         run: |
           mkdir -p release_bundle
-          cp build/bin/astonia3-server release_bundle/ 2>/dev/null || true
-          cp build/bin/chatserver release_bundle/ 2>/dev/null || true
-          cp build/bin/create_account release_bundle/ 2>/dev/null || true
-          cp build/bin/create_character release_bundle/ 2>/dev/null || true
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            cp "build/Release/astonia3-server.exe" release_bundle/ 2>/dev/null || true
+            cp "build/Release/chatserver.exe" release_bundle/ 2>/dev/null || true
+            cp "build/Release/create_account.exe" release_bundle/ 2>/dev/null || true
+            cp "build/Release/create_character.exe" release_bundle/ 2>/dev/null || true
+          else
+            cp build/bin/astonia3-server release_bundle/ 2>/dev/null || true
+            cp build/bin/chatserver release_bundle/ 2>/dev/null || true
+            cp build/bin/create_account release_bundle/ 2>/dev/null || true
+            cp build/bin/create_character release_bundle/ 2>/dev/null || true
+          fi
           cp README.md release_bundle/
           cp todo.md release_bundle/
           cp config/server.conf.example release_bundle/server.conf.example
