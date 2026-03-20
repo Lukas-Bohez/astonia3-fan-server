@@ -4,6 +4,8 @@
 #include <windows.h>
 #include <shlwapi.h>
 #include <stdio.h>
+#include <stdarg.h>
+#include <stdbool.h>
 
 static HWND hStartServer;
 static HWND hStartClient;
@@ -22,7 +24,28 @@ static void SetStatus(const wchar_t *fmt, ...) {
     SetWindowTextW(hStatus, buf);
 }
 
+static bool FileExists(const wchar_t *path) {
+    DWORD attr = GetFileAttributesW(path);
+    return (attr != INVALID_FILE_ATTRIBUTES && !(attr & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+static bool ChooseExistingPath(const wchar_t *paths[], int count, wchar_t *outPath, int outPathSize) {
+    for (int i = 0; i < count; i++) {
+        const wchar_t *candidate = paths[i];
+        if (candidate && candidate[0] && FileExists(candidate)) {
+            wcsncpy_s(outPath, outPathSize, candidate, _TRUNCATE);
+            return true;
+        }
+    }
+    return false;
+}
+
 static void LaunchProcess(const wchar_t *path, const wchar_t *args) {
+    if (!FileExists(path)) {
+        SetStatus(L"Executable not found: %s", path);
+        return;
+    }
+
     STARTUPINFOW si = {0};
     PROCESS_INFORMATION pi = {0};
     si.cb = sizeof(si);
@@ -34,7 +57,7 @@ static void LaunchProcess(const wchar_t *path, const wchar_t *args) {
         swprintf_s(cmdline, _countof(cmdline), L"\"%s\"", path);
     }
 
-    if (!CreateProcessW(NULL, cmdline, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+    if (!CreateProcessW(path, cmdline, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
         SetStatus(L"Failed to start %s (error %d)", path, GetLastError());
         return;
     }
@@ -49,8 +72,17 @@ static void GetEditText(HWND hEdit, wchar_t *out, int outSize) {
 }
 
 static void OnStartServer() {
+    wchar_t candidates[3][MAX_PATH];
+    PathCombineW(candidates[0], g_basePath, L"astonia_community_server3\\server.exe");
+    PathCombineW(candidates[1], g_basePath, L"server.exe");
+    wcscpy_s(candidates[2], MAX_PATH, L"server.exe");
+
     wchar_t serverPath[MAX_PATH];
-    PathCombineW(serverPath, g_basePath, L"astonia_community_server3\\server.exe");
+    const wchar_t *serverPaths[3] = {candidates[0], candidates[1], candidates[2]};
+    if (!ChooseExistingPath(serverPaths, 3, serverPath, MAX_PATH)) {
+        SetStatus(L"Server executable not found in expected locations");
+        return;
+    }
 
     wchar_t portStr[32] = L"";
     GetEditText(hServerPortEdit, portStr, _countof(portStr));
@@ -64,8 +96,18 @@ static void OnStartServer() {
 }
 
 static void OnStartClient() {
+    wchar_t candidates[4][MAX_PATH];
+    PathCombineW(candidates[0], g_basePath, L"astonia_community_server3\\astonia_community_client\\bin\\moac.exe");
+    PathCombineW(candidates[1], g_basePath, L"astonia_community_client\\bin\\moac.exe");
+    PathCombineW(candidates[2], g_basePath, L"launcher\\moac.exe");
+    wcscpy_s(candidates[3], MAX_PATH, L"moac.exe");
+
     wchar_t clientPath[MAX_PATH];
-    PathCombineW(clientPath, g_basePath, L"astonia_community_server3\\astonia_community_client\\bin\\moac.exe");
+    const wchar_t *clientPaths[4] = {candidates[0], candidates[1], candidates[2], candidates[3]};
+    if (!ChooseExistingPath(clientPaths, 4, clientPath, MAX_PATH)) {
+        SetStatus(L"Client executable not found in expected locations");
+        return;
+    }
 
     wchar_t host[128] = L"";
     GetEditText(hServerHostEdit, host, _countof(host));
@@ -78,7 +120,10 @@ static void OnStartClient() {
         swprintf_s(args, _countof(args), L"-d %s", host);
     }
     if (portStr[0] != L'\0') {
-        wcscat_s(args, _countof(args), L" -t ");
+        if (args[0] != L'\0') {
+            wcscat_s(args, _countof(args), L" ");
+        }
+        wcscat_s(args, _countof(args), L"-t ");
         wcscat_s(args, _countof(args), portStr);
     }
 
