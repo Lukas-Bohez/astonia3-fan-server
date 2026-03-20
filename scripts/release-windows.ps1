@@ -22,10 +22,15 @@ Write-Host "Building server..."
 $serverMake = Join-Path $MingwPath 'bin\mingw32-make.exe'
 if (-not (Test-Path $serverMake)) { throw "mingw32-make not found: $serverMake" }
 
-& $serverMake -f "$ServerDir\Makefile.win" CC="$MingwPath\bin\gcc" || throw "Server build failed"
+$serverBuildResult = & $serverMake -f "$ServerDir\Makefile.win" CC="$MingwPath\bin\gcc"
+if ($LASTEXITCODE -ne 0) { throw "Server build failed (exit code $LASTEXITCODE)" }
 
 Write-Host "Building launcher..."
-& $serverMake -f "$LauncherDir\Makefile" || throw "Launcher build failed"
+Push-Location "$LauncherDir"
+$launcherBuildResult = & $serverMake -f "Makefile" CC="$MingwPath\bin\gcc"
+$launcherExit = $LASTEXITCODE
+Pop-Location
+if ($launcherExit -ne 0) { throw "Launcher build failed (exit code $launcherExit)" }
 
 Write-Host "Optional: build client (if you have MSYS2, may require SDL2, Rust, etc)."
 $clientExecutable = Join-Path $ClientDir 'bin\moac.exe'
