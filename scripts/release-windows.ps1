@@ -52,6 +52,40 @@ if (Test-Path $clientExecutable) {
     Copy-Item -Path $clientExecutable -Destination $releaseDir -Force
 }
 
+# Copy required DLL dependencies for Windows runtime
+$runtimeBins = @()
+$runtimeBins += "$MingwPath\bin"
+if (Test-Path 'C:\msys64\clang64\bin') { $runtimeBins += 'C:\msys64\clang64\bin' }
+if (Test-Path 'C:\msys64\mingw64\bin') { $runtimeBins += 'C:\msys64\mingw64\bin' }
+
+$requiredDlls = @(
+    'libwinpthread-1.dll',
+    'libgcc_s_dw2-1.dll',
+    'libstdc++-6.dll',
+    'SDL3.dll',
+    'SDL3_mixer.dll',
+    'zlib1.dll',
+    'libpng16-16.dll',
+    'libzip.dll',
+    'dwarfstack.dll',
+    'libmimalloc.dll'
+)
+
+foreach ($dll in $requiredDlls) {
+    $found = $false
+    foreach ($bin in $runtimeBins) {
+        $src = Join-Path $bin $dll
+        if (Test-Path $src) {
+            Copy-Item -Path $src -Destination $releaseDir -Force
+            $found = $true
+            break
+        }
+    }
+    if (-not $found) {
+        Write-Warning "Dependency not found: $dll (skipped). Please install in system path or provide manually."
+    }
+}
+
 Copy-Item -Path "$ServerDir\run-server-client.ps1" -Destination $releaseDir -Force
 Copy-Item -Path "README.md" -Destination $releaseDir -Force
 Copy-Item -Path ".gitignore" -Destination $releaseDir -Force
