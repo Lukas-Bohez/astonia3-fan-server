@@ -106,6 +106,36 @@ static bool ResolveExecutablePath(HWND hEdit, const wchar_t *defaultRelative, co
     return false;
 }
 
+static void UpdateLayout(int width, int height) {
+    int margin = 10;
+    int labelWidth = 80;
+    int serverPortWidth = 70;
+    int editHeight = 20;
+    int y = 10;
+
+    int hostEditWidth = width - (margin * 4 + labelWidth + serverPortWidth);
+    if (hostEditWidth < 120) hostEditWidth = 120;
+
+    SetWindowPos(hServerHostEdit, NULL, margin + labelWidth, y, hostEditWidth, editHeight, SWP_NOZORDER);
+    SetWindowPos(hServerPortEdit, NULL, margin + labelWidth + hostEditWidth + margin, y, serverPortWidth, editHeight, SWP_NOZORDER);
+
+    y = 40;
+    SetWindowPos(hServerPathEdit, NULL, margin + labelWidth, y, width - (margin * 2 + labelWidth), editHeight, SWP_NOZORDER);
+
+    y = 70;
+    SetWindowPos(hClientPathEdit, NULL, margin + labelWidth, y, width - (margin * 2 + labelWidth), editHeight, SWP_NOZORDER);
+
+    y = 100;
+    SetWindowPos(hStatus, NULL, margin + labelWidth, y, width - (margin * 2 + labelWidth), editHeight, SWP_NOZORDER);
+
+    y = 130;
+    int buttonWidth = (width - margin * 4) / 3;
+    if (buttonWidth < 100) buttonWidth = 100;
+    SetWindowPos(hStartServer, NULL, margin, y, buttonWidth, 30, SWP_NOZORDER);
+    SetWindowPos(hStartClient, NULL, margin * 2 + buttonWidth, y, buttonWidth, 30, SWP_NOZORDER);
+    SetWindowPos(hStartBoth, NULL, margin * 3 + buttonWidth * 2, y, buttonWidth, 30, SWP_NOZORDER);
+}
+
 static void OnStartServer() {
     wchar_t serverPath[MAX_PATH] = L"";
     if (!ResolveExecutablePath(hServerPathEdit, L"astonia_community_server3\\server.exe", L"server.exe", serverPath, MAX_PATH)) {
@@ -187,14 +217,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         hStartBoth = CreateWindowW(L"BUTTON", L"Start Both", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                                    270, 130, 120, 30, hwnd, (HMENU)3, NULL, NULL);
 
-        hStartServer = CreateWindowW(L"BUTTON", L"Start Server", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                                     10, 40, 120, 30, hwnd, (HMENU)1, NULL, NULL);
-        hStartClient = CreateWindowW(L"BUTTON", L"Start Client", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                                     140, 40, 120, 30, hwnd, (HMENU)2, NULL, NULL);
-        hStartBoth = CreateWindowW(L"BUTTON", L"Start Both", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                                   270, 40, 120, 30, hwnd, (HMENU)3, NULL, NULL);
-        hStatus = CreateWindowW(L"STATIC", L"Ready", WS_CHILD | WS_VISIBLE | SS_LEFT,
-                                10, 80, 380, 25, hwnd, NULL, NULL, NULL);
+        UpdateLayout(420, 180);
     } break;
     case WM_COMMAND:
         switch (LOWORD(wParam)) {
@@ -210,6 +233,11 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             break;
         }
         break;
+    case WM_SIZE: {
+        int width = LOWORD(lParam);
+        int height = HIWORD(lParam);
+        UpdateLayout(width, height);
+    } break;
     case WM_CLOSE:
         DestroyWindow(hwnd);
         break;
