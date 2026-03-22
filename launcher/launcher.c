@@ -3,6 +3,7 @@
 
 #include <windows.h>
 #include <shlwapi.h>
+#include <commdlg.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -10,6 +11,8 @@
 static HWND hStartServer;
 static HWND hStartClient;
 static HWND hStartBoth;
+static HWND hServerPathEdit;
+static HWND hClientPathEdit;
 static HWND hServerHostEdit;
 static HWND hServerPortEdit;
 static HWND hStatus;
@@ -71,16 +74,42 @@ static void GetEditText(HWND hEdit, wchar_t *out, int outSize) {
     GetWindowTextW(hEdit, out, outSize);
 }
 
-static void OnStartServer() {
-    wchar_t candidates[3][MAX_PATH];
-    PathCombineW(candidates[0], g_basePath, L"astonia_community_server3\\server.exe");
-    PathCombineW(candidates[1], g_basePath, L"server.exe");
-    wcscpy_s(candidates[2], MAX_PATH, L"server.exe");
+static bool GetExecutablePathFromEdit(HWND hEdit, wchar_t *outPath, int outSize) {
+    wchar_t path[MAX_PATH] = L"";
+    GetEditText(hEdit, path, _countof(path));
+    if (path[0] == L'\0') {
+        return false;
+    }
+    if (FileExists(path)) {
+        wcsncpy_s(outPath, outSize, path, _TRUNCATE);
+        return true;
+    }
+    return false;
+}
 
-    wchar_t serverPath[MAX_PATH];
-    const wchar_t *serverPaths[3] = {candidates[0], candidates[1], candidates[2]};
-    if (!ChooseExistingPath(serverPaths, 3, serverPath, MAX_PATH)) {
-        SetStatus(L"Server executable not found in expected locations");
+static bool ResolveExecutablePath(HWND hEdit, const wchar_t *defaultRelative, const wchar_t *filename, wchar_t *outPath, int outSize) {
+    if (GetExecutablePathFromEdit(hEdit, outPath, outSize)) {
+        return true;
+    }
+
+    // Preferred default candidate first
+    wchar_t candidates[4][MAX_PATH];
+    PathCombineW(candidates[0], g_basePath, defaultRelative);
+    PathCombineW(candidates[1], g_basePath, filename);
+    wcscpy_s(candidates[2], MAX_PATH, filename);
+    wcscpy_s(candidates[3], MAX_PATH, L"");
+
+    const wchar_t *paths[] = {candidates[0], candidates[1], candidates[2]};
+    if (ChooseExistingPath(paths, 3, outPath, outSize)) {
+        return true;
+    }
+    return false;
+}
+
+static void OnStartServer() {
+    wchar_t serverPath[MAX_PATH] = L"";
+    if (!ResolveExecutablePath(hServerPathEdit, L"astonia_community_server3\\server.exe", L"server.exe", serverPath, MAX_PATH)) {
+        SetStatus(L"Server path invalid. Enter full path or place server.exe beside launcher or in astonia_community_server3 folder.");
         return;
     }
 
@@ -96,16 +125,9 @@ static void OnStartServer() {
 }
 
 static void OnStartClient() {
-    wchar_t candidates[4][MAX_PATH];
-    PathCombineW(candidates[0], g_basePath, L"astonia_community_server3\\astonia_community_client\\bin\\moac.exe");
-    PathCombineW(candidates[1], g_basePath, L"astonia_community_client\\bin\\moac.exe");
-    PathCombineW(candidates[2], g_basePath, L"launcher\\moac.exe");
-    wcscpy_s(candidates[3], MAX_PATH, L"moac.exe");
-
-    wchar_t clientPath[MAX_PATH];
-    const wchar_t *clientPaths[4] = {candidates[0], candidates[1], candidates[2], candidates[3]};
-    if (!ChooseExistingPath(clientPaths, 4, clientPath, MAX_PATH)) {
-        SetStatus(L"Client executable not found in expected locations");
+    wchar_t clientPath[MAX_PATH] = L"";
+    if (!ResolveExecutablePath(hClientPathEdit, L"astonia_community_server3\\astonia_community_client\\bin\\moac.exe", L"moac.exe", clientPath, MAX_PATH)) {
+        SetStatus(L"Client path invalid. Enter full path or place moac.exe in expected locations.");
         return;
     }
 
@@ -133,15 +155,37 @@ static void OnStartClient() {
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
     case WM_CREATE: {
-        CreateWindowW(L"STATIC", L"Server Host:", WS_CHILD | WS_VISIBLE | SS_LEFT,
+        CreateWindowW(L"STATIC", L"Server host:", WS_CHILD | WS_VISIBLE | SS_LEFT,
                       10, 10, 80, 20, hwnd, NULL, NULL, NULL);
         hServerHostEdit = CreateWindowW(L"EDIT", L"127.0.0.1", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
                                         90, 10, 140, 20, hwnd, NULL, NULL, NULL);
 
-        CreateWindowW(L"STATIC", L"Server Port:", WS_CHILD | WS_VISIBLE | SS_LEFT,
+        CreateWindowW(L"STATIC", L"Server port:", WS_CHILD | WS_VISIBLE | SS_LEFT,
                       240, 10, 80, 20, hwnd, NULL, NULL, NULL);
         hServerPortEdit = CreateWindowW(L"EDIT", L"5556", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
                                         320, 10, 70, 20, hwnd, NULL, NULL, NULL);
+
+        CreateWindowW(L"STATIC", L"Server exe:", WS_CHILD | WS_VISIBLE | SS_LEFT,
+                      10, 40, 80, 20, hwnd, NULL, NULL, NULL);
+        hServerPathEdit = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+                                        90, 40, 300, 20, hwnd, NULL, NULL, NULL);
+
+        CreateWindowW(L"STATIC", L"Client exe:", WS_CHILD | WS_VISIBLE | SS_LEFT,
+                      10, 70, 80, 20, hwnd, NULL, NULL, NULL);
+        hClientPathEdit = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+                                        90, 70, 300, 20, hwnd, NULL, NULL, NULL);
+
+        CreateWindowW(L"STATIC", L"Status:", WS_CHILD | WS_VISIBLE | SS_LEFT,
+                      10, 100, 80, 20, hwnd, NULL, NULL, NULL);
+        hStatus = CreateWindowW(L"STATIC", L"Ready", WS_CHILD | WS_VISIBLE | SS_LEFT,
+                                90, 100, 300, 20, hwnd, NULL, NULL, NULL);
+
+        hStartServer = CreateWindowW(L"BUTTON", L"Start Server", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                                     10, 130, 120, 30, hwnd, (HMENU)1, NULL, NULL);
+        hStartClient = CreateWindowW(L"BUTTON", L"Start Client", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                                     140, 130, 120, 30, hwnd, (HMENU)2, NULL, NULL);
+        hStartBoth = CreateWindowW(L"BUTTON", L"Start Both", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                                   270, 130, 120, 30, hwnd, (HMENU)3, NULL, NULL);
 
         hStartServer = CreateWindowW(L"BUTTON", L"Start Server", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                                      10, 40, 120, 30, hwnd, (HMENU)1, NULL, NULL);

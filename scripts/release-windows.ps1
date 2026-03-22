@@ -71,6 +71,7 @@ $requiredDlls = @(
     'libmimalloc.dll'
 )
 
+$missingDeps = @()
 foreach ($dll in $requiredDlls) {
     $found = $false
     foreach ($bin in $runtimeBins) {
@@ -83,7 +84,12 @@ foreach ($dll in $requiredDlls) {
     }
     if (-not $found) {
         Write-Warning "Dependency not found: $dll (skipped). Please install in system path or provide manually."
+        $missingDeps += $dll
     }
+}
+
+if ($missingDeps.Count -gt 0) {
+    throw "Missing required runtime DLLs: $($missingDeps -join ', '). Cannot create a fully functioning release package without them."
 }
 
 Copy-Item -Path "$ServerDir\run-server-client.ps1" -Destination $releaseDir -Force
